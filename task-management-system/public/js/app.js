@@ -209,8 +209,10 @@ class TaskManager {
 
     // SSE for subtle real-time tasks updates
     initTasksSSE() {
+        let pollingInterval = null;
         if (window.EventSource) {
             let evtSource = null;
+            let sseFailed = false;
             const startSSE = () => {
                 if (evtSource) evtSource.close();
                 if (!this.currentUser || this.currentUser.role !== 'user') return;
@@ -231,10 +233,18 @@ class TaskManager {
                     } catch (err) {}
                 };
                 evtSource.onerror = () => {
-                    setTimeout(startSSE, 5000);
+                    if (!sseFailed) {
+                        sseFailed = true;
+                        if (evtSource) evtSource.close();
+                        // Fallback to polling every 10 seconds
+                        pollingInterval = setInterval(() => this.loadUserTasks(), 10000);
+                    }
                 };
             };
             startSSE();
+        } else {
+            // No SSE support, fallback to polling
+            pollingInterval = setInterval(() => this.loadUserTasks(), 10000);
         }
     }
 
