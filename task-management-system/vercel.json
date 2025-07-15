@@ -6,6 +6,7 @@
     }
   },
   "routes": [
+    { "src": "/api/user/tasks_sse.php", "dest": "/api/user/tasks_sse.php" },
     { "src": "/js/(.*)", "dest": "/public/js/$1" },
     { "src": "/css/(.*)", "dest": "/public/css/$1" },
     { "src": "/(images|fonts|assets|media|static)/(.*)", "dest": "/public/$1/$2" },
