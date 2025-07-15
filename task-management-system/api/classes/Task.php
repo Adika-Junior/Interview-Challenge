@@ -47,6 +47,11 @@ class Task {
     }
     
     public function createTask($title, $description, $assignedTo, $assignedBy, $deadline) {
+        // Validate assignedTo is a valid user ID
+        $userCheck = $this->db->safeFetch("SELECT id FROM users WHERE id = ?", [$assignedTo]);
+        if (!$userCheck) {
+            throw new Exception("Invalid assigned_to user ID: $assignedTo");
+        }
         try {
             $this->db->safeQuery("
                 INSERT INTO tasks (title, description, assigned_to, assigned_by, deadline, status) 

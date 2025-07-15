@@ -46,6 +46,17 @@ function hideUserModal() {
 }
 function showTaskModal(task = null) {
     hideAllModals();
+    // Ensure users are loaded before showing the modal
+    if (window.app && typeof window.app.loadUsers === 'function') {
+        window.app.loadUsers().then(() => {
+            showTaskModalInner(task);
+        });
+        return;
+    }
+    showTaskModalInner(task);
+}
+
+function showTaskModalInner(task = null) {
     const modal = document.getElementById('task-modal');
     if (modal) {
         modal.hidden = false;
@@ -1041,6 +1052,8 @@ class TaskManager {
         let status = null;
         const statusInput = document.getElementById('admin-task-status');
         if (statusInput) status = statusInput.value;
+        // Debug log
+        console.log('Saving task with:', { id, title, description, assigned_to, deadline, status });
         if (id) {
             // Editing: update all fields
             try {
