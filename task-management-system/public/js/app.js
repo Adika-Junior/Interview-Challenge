@@ -209,43 +209,7 @@ class TaskManager {
 
     // SSE for subtle real-time tasks updates
     initTasksSSE() {
-        let pollingInterval = null;
-        if (window.EventSource) {
-            let evtSource = null;
-            let sseFailed = false;
-            const startSSE = () => {
-                if (evtSource) evtSource.close();
-                if (!this.currentUser || this.currentUser.role !== 'user') return;
-                const jwt = this.jwtToken || localStorage.getItem('jwt_token');
-                if (!jwt) return;
-                evtSource = new EventSource('/api/user/tasks_sse.php?token=' + encodeURIComponent(jwt));
-                evtSource.onmessage = (e) => {
-                    try {
-                        const resp = JSON.parse(e.data);
-                        if (resp && resp.tasks) {
-                            const newHash = this.hashTasks(resp.tasks);
-                            if (newHash !== this._lastTasksHash) {
-                                this.tasks = resp.tasks;
-                                this._lastTasksHash = newHash;
-                                this.animateTasksTableUpdate();
-                            }
-                        }
-                    } catch (err) {}
-                };
-                evtSource.onerror = () => {
-                    if (!sseFailed) {
-                        sseFailed = true;
-                        if (evtSource) evtSource.close();
-                        // Fallback to polling every 10 seconds
-                        pollingInterval = setInterval(() => this.loadUserTasks(), 10000);
-                    }
-                };
-            };
-            startSSE();
-        } else {
-            // No SSE support, fallback to polling
-            pollingInterval = setInterval(() => this.loadUserTasks(), 10000);
-        }
+        // Remove SSE and polling fallback. Do nothing.
     }
 
     // Simple hash function for tasks array
@@ -423,8 +387,7 @@ class TaskManager {
         } catch (e) {
             if (!suppressErrorToast) {
                 this.showToast('Server error: Invalid response. Please try again later.', 'error');
-                // Optionally log the raw response for debugging
-                // console.error('Failed to parse JSON:', text);
+                console.error('Failed to parse JSON:', text); // Extra debug logging
             }
             throw new Error('JSON parsing error: ' + e.message + '\nResponse text that failed to parse: ' + text);
         }

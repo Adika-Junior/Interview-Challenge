@@ -508,43 +508,16 @@ class EmailService {
         }
     }
 
-    public function sendUserWelcomeEmail($email, $username, $password) {
-        $mail = new PHPMailer(true);
-        try {
-            $emailConfig = $this->config->getEmailConfig();
-            $appConfig = $this->config->getAppConfig();
-            $mail->isSMTP();
-            $mail->Host       = $emailConfig['host'];
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $emailConfig['username'];
-            $mail->Password   = $emailConfig['password'];
-            $mail->SMTPSecure = $emailConfig['encryption'] === 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = $emailConfig['port'];
-            $mail->setFrom($emailConfig['from_email'], $emailConfig['from_name']);
-            $mail->addAddress($email);
-            $mail->isHTML(true);
-            $mail->Subject = 'Welcome to Task Management System';
-            $content = '<p style="color: #2d1b0a; font-size: 18px; font-weight: 500; margin: 0 0 24px 0; line-height: 1.6;">'
-                . 'Hello <strong>' . htmlspecialchars($username) . '</strong>!<br><br>'
-                . 'Your account has been created. You can now log in and start using the system.</p>'
-                . '<div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #5a3c11;">
-                    <div style="margin-bottom: 12px;"><strong>Username:</strong> ' . htmlspecialchars($username) . '</div>
-                    <div style="margin-bottom: 12px;"><strong>Password:</strong> ' . htmlspecialchars($password) . '</div>
-                </div>'
-                . '<p style="color: #6a543c; font-size: 16px; margin: 24px 0 0 0; font-weight: 500;">'
-                . 'Please log in and change your password after your first login for security.</p>';
-            $mail->Body = $this->getEmailTemplate(
-                'Welcome to Task Management System',
-                $content,
-                'Login Now',
-                $appConfig['url'],
-                'welcome'
-            );
-            $mail->send();
-            return true;
-        } catch (Exception $e) {
-            error_log('Mailer Error (Welcome): ' . $mail->ErrorInfo);
-            return false;
-        }
+    public function sendUserWelcomeEmail($to, $user, $password = null) {
+        $subject = 'Welcome to Task Management System';
+        $body = '<h2>Welcome to Task Management System!</h2>';
+        $body .= '<p>Your account has been created. Here are your login credentials:</p>';
+        $body .= '<ul>';
+        $body .= '<li><strong>Email:</strong> ' . htmlspecialchars($user['email']) . '</li>';
+        $body .= '<li><strong>Password:</strong> ' . htmlspecialchars($password ? $password : '[unchanged]') . '</li>';
+        $body .= '</ul>';
+        $body .= '<p>You can log in at <a href="https://interview-challenge-lac.vercel.app/">https://interview-challenge-lac.vercel.app/</a></p>';
+        $body .= '<p>If you have any questions, contact your admin.</p>';
+        return $this->sendEmail($to, $subject, $body);
     }
 }

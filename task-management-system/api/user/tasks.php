@@ -30,6 +30,20 @@ function getUserFromJWT($jwt, $secret) {
     if (!hash_equals($expected_sig, $sig)) return null;
     return json_decode(base64url_decode($payload), true);
 }
+function logDebug($data) {
+    $logFile = '/tmp/user_tasks_debug.log';
+    $entry = [
+        'timestamp' => date('c'),
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'headers' => function_exists('getallheaders') ? getallheaders() : [],
+        'jwt' => $GLOBALS['jwt'] ?? null,
+        'user' => $GLOBALS['user'] ?? null,
+        'request_method' => $_SERVER['REQUEST_METHOD'],
+        'uri' => $_SERVER['REQUEST_URI'],
+        'data' => $data
+    ];
+    file_put_contents($logFile, json_encode($entry) . PHP_EOL, FILE_APPEND | LOCK_EX);
+}
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $jwt = null;
 if (isset($headers['Authorization'])) {
@@ -37,8 +51,11 @@ if (isset($headers['Authorization'])) {
 } elseif (isset($headers['authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['authorization']);
 }
+$GLOBALS['jwt'] = $jwt;
 $user = getUserFromJWT($jwt, $jwtSecret);
+$GLOBALS['user'] = $user;
 if (!$user || !isset($user['id'])) {
+    logDebug(['error' => 'Access denied. Login required.']);
     http_response_code(401);
     echo json_encode(['error' => 'Access denied. Login required.']);
     exit;
@@ -71,6 +88,7 @@ switch ($_SERVER['REQUEST_METHOD']) {
         try {
             $taskDetails = $task->getTaskById($data['id']);
             if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
+                logDebug(['error' => 'You can only update your own tasks.', 'taskDetails' => $taskDetails, 'userId' => $userId]);
                 http_response_code(403);
                 echo json_encode(['error' => 'You can only update your own tasks.']);
                 exit;
