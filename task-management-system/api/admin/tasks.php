@@ -72,6 +72,13 @@ try {
         $stmt->bind_param('ssiss', $data['title'], $data['description'], $data['assigned_to'], $assignedBy, $data['deadline']);
         $ok = $stmt->execute();
         if ($ok) {
+            $insertId = $con->insert_id;
+            error_log('Task insert_id: ' . $insertId);
+            if (!$insertId) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Task creation failed: insert_id is 0.']);
+                exit;
+            }
             // Fetch assigned user's email and username
             $userStmt = $con->prepare("SELECT email, username FROM users WHERE id = ?");
             $userStmt->bind_param('i', $data['assigned_to']);
@@ -88,8 +95,9 @@ try {
                 $emailService = new EmailService();
                 $emailService->sendTaskAssignmentEmail($assignedUser['email'], $taskDetails);
             }
-            echo json_encode(['success' => true, 'task_id' => $con->insert_id]);
+            echo json_encode(['success' => true, 'task_id' => $insertId]);
         } else {
+            error_log('Task creation error: ' . $stmt->error);
             http_response_code(500);
             echo json_encode(['error' => $stmt->error]);
         }

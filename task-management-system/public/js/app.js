@@ -63,7 +63,10 @@ function showTaskModalInner(task = null) {
         modal.style.display = 'flex';
         if (task && window.app) {
             window.app.editingTaskId = task.id;
-            window.app.loadTaskComments(task.id);
+            // Only load comments if task.id is a valid number and not 0/undefined
+            if (typeof task.id !== 'undefined' && task.id !== null && Number(task.id) > 0) {
+                window.app.loadTaskComments(task.id);
+            }
             // Show only the relevant form
             const userForm = document.getElementById('user-comment-form');
             const adminForm = document.getElementById('admin-comment-form');
