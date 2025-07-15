@@ -36,6 +36,7 @@ ini_set('session.use_strict_mode', 1);
 session_name('TASK_MANAGEMENT_SESSION');
 
 // Use MySQL session handler
+require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/MySQLSessionHandler.php';
 $pdo = (new Database())->getConnection();
 $handler = new MySQLSessionHandler($pdo);

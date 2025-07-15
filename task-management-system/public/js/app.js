@@ -481,21 +481,21 @@ class TaskManager {
     }
 
     // Remove startAutoRefresh for users, keep for admin only
-    startAutoRefresh() {
-        if (this._autoRefreshInterval) clearInterval(this._autoRefreshInterval);
-        if (this.currentUser && this.currentUser.role === 'admin') {
-            this._autoRefreshInterval = setInterval(async () => {
-                await this.loadAllTasks();
-            }, 10000); // 10 seconds
-        }
-        // Update time-remaining display every minute for smooth countdown
-        if (this._timeUpdateInterval) clearInterval(this._timeUpdateInterval);
-        this._timeUpdateInterval = setInterval(() => {
-            this.renderTasksTable();
-        }, 60000); // 1 minute
-    }
+    // startAutoRefresh() {
+    //     if (this._autoRefreshInterval) clearInterval(this._autoRefreshInterval);
+    //     if (this.currentUser && this.currentUser.role === 'admin') {
+    //         this._autoRefreshInterval = setInterval(async () => {
+    //             await this.loadAllTasks();
+    //         }, 10000); // 10 seconds
+    //     }
+    //     // Update time-remaining display every minute for smooth countdown
+    //     if (this._timeUpdateInterval) clearInterval(this._timeUpdateInterval);
+    //     this._timeUpdateInterval = setInterval(() => {
+    //         this.renderTasksTable();
+    //     }, 60000); // 1 minute
+    // }
 
-    // In showDashboard, only call startAutoRefresh for admin
+    // In showDashboard, do not call startAutoRefresh
     async showDashboard() {
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('dashboard-container').style.display = 'block';
@@ -506,7 +506,7 @@ class TaskManager {
             document.getElementById('admin-controls').style.display = 'block';
             await this.loadUsers();
             await this.loadAllTasks();
-            this.startAutoRefresh();
+            // this.startAutoRefresh(); // Removed auto-refresh
         } else {
             document.getElementById('admin-controls').style.display = 'none';
             await this.loadUserTasks();

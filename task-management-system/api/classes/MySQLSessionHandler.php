@@ -13,15 +13,15 @@ class MySQLSessionHandler implements SessionHandlerInterface {
         $this->createTableIfNotExists();
     }
 
-    public function open($savePath, $sessionName) {
+    public function open(string $savePath, string $sessionName): bool {
         return true;
     }
 
-    public function close() {
+    public function close(): bool {
         return true;
     }
 
-    public function read($id) {
+    public function read(string $id): string|false {
         $stmt = $this->pdo->prepare("SELECT data FROM {$this->table} WHERE id = :id AND expires > :now");
         $stmt->execute([
             ':id' => $id,
@@ -33,7 +33,7 @@ class MySQLSessionHandler implements SessionHandlerInterface {
         return '';
     }
 
-    public function write($id, $data) {
+    public function write(string $id, string $data): bool {
         $expires = time() + $this->ttl;
         $stmt = $this->pdo->prepare("REPLACE INTO {$this->table} (id, data, expires) VALUES (:id, :data, :expires)");
         return $stmt->execute([
@@ -43,14 +43,15 @@ class MySQLSessionHandler implements SessionHandlerInterface {
         ]);
     }
 
-    public function destroy($id) {
+    public function destroy(string $id): bool {
         $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 
-    public function gc($maxlifetime) {
+    public function gc(int $maxlifetime): int|false {
         $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE expires < :now");
-        return $stmt->execute([':now' => time()]);
+        $stmt->execute([':now' => time()]);
+        return $stmt->rowCount();
     }
 
     private function createTableIfNotExists() {
