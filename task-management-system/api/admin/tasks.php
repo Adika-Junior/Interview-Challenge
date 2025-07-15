@@ -41,6 +41,7 @@ if (!$user || $user['role'] !== 'admin') {
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
+require_once __DIR__ . '/../classes/EmailService.php';
 try {
     $host = 'taskmanagement.mysql.database.azure.com';
     $db   = 'task_management';
@@ -71,6 +72,22 @@ try {
         $stmt->bind_param('ssiss', $data['title'], $data['description'], $data['assigned_to'], $assignedBy, $data['deadline']);
         $ok = $stmt->execute();
         if ($ok) {
+            // Fetch assigned user's email and username
+            $userStmt = $con->prepare("SELECT email, username FROM users WHERE id = ?");
+            $userStmt->bind_param('i', $data['assigned_to']);
+            $userStmt->execute();
+            $userResult = $userStmt->get_result();
+            $assignedUser = $userResult->fetch_assoc();
+            if ($assignedUser) {
+                $taskDetails = [
+                    'title' => $data['title'],
+                    'description' => $data['description'],
+                    'deadline' => $data['deadline'],
+                    'assigned_by_name' => $user['username'] ?? 'Admin',
+                ];
+                $emailService = new EmailService();
+                $emailService->sendTaskAssignmentEmail($assignedUser['email'], $taskDetails);
+            }
             echo json_encode(['success' => true, 'task_id' => $con->insert_id]);
         } else {
             http_response_code(500);

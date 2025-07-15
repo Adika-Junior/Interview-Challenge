@@ -15,7 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Global error handler for debugging
 window.addEventListener('error', function(event) {
-    console.error('Global JS Error:', event.error || event.message, event);
+    // Error already handled in apiCall
 });
 
 // --- Modal Management ---
@@ -107,7 +107,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const userForm = document.getElementById('user-form');
     if (userForm) userForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        console.log('User form submit handler running (JS interception works)');
         if (window.app && typeof window.app.saveUser === 'function') {
             window.app.saveUser().then(hideUserModal);
         }
@@ -364,7 +363,6 @@ class TaskManager {
 
     // --- Robust API Call Utility ---
     async apiCall(endpoint, method = 'GET', data = null, suppressErrorToast = false) {
-        console.log(`[apiCall] ${method} ${endpoint}`, data);
         const headers = {
             'Content-Type': 'application/json',
             'User-Agent': navigator.userAgent // Add User-Agent header for Vercel
@@ -380,7 +378,6 @@ class TaskManager {
                 body: data ? JSON.stringify(data) : undefined
             });
         } catch (err) {
-            console.error(`[apiCall] Network error:`, err);
             if (!suppressErrorToast) this.showToast('Network error. Please check your connection.', 'error');
             throw err;
         }
@@ -389,15 +386,12 @@ class TaskManager {
         try {
             result = JSON.parse(text);
         } catch (e) {
-            console.error(`[apiCall] JSON parse error:`, e, text);
             if (!suppressErrorToast) this.showToast('JSON parsing error: ' + e.message, 'error');
             throw new Error('JSON parsing error: ' + e.message + '\nResponse text that failed to parse: ' + text);
         }
         if (!response.ok && !suppressErrorToast) {
-            console.warn(`[apiCall] API error:`, result);
             this.showToast(result.error || 'API call failed', 'error');
         }
-        console.log(`[apiCall] Response from ${endpoint}:`, result);
         return result;
     }
 
@@ -411,10 +405,8 @@ class TaskManager {
     }
 
     async checkAuth() {
-        console.log(`[checkAuth] Checking authentication...`);
         try {
             const result = await this.apiCall('/api/auth/check.php', 'POST', null, true);
-            console.log(`[checkAuth] Result:`, result);
             if (result && result.user) {
                 this.currentUser = result.user;
                 this.showDashboard();
@@ -423,7 +415,6 @@ class TaskManager {
                 this.showLogin();
             }
         } catch (error) {
-            console.error(`[checkAuth] Error:`, error);
             hideAllModals(); // Hide all modals on error
             this.showLogin();
         }
@@ -432,10 +423,8 @@ class TaskManager {
     async login() {
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        console.log(`[login] Attempting login for`, username);
         try {
             const result = await this.apiCall('/api/auth/login.php', 'POST', { username, password });
-            console.log(`[login] Result:`, result);
             if (result && result.success && result.token) {
                 this.saveSession(result.token, result.user);
                 this.showDashboard();
@@ -446,7 +435,6 @@ class TaskManager {
                 this.showToast(result.error || 'Login failed', 'error');
             }
         } catch (error) {
-            console.error(`[login] Error:`, error);
             // Error already handled in apiCall
         }
     }
@@ -499,7 +487,6 @@ class TaskManager {
     }
 
     async loadDashboardStats() {
-        console.log(`[loadDashboardStats] Loading dashboard stats...`);
         try {
             let result;
             if (this.currentUser.role === 'admin') {
@@ -507,10 +494,7 @@ class TaskManager {
             } else {
                 result = await this.apiCall('/api/user/dashboard.php');
             }
-            console.log(`[loadDashboardStats] Result:`, result);
             const stats = result.stats;
-            
-            console.log('Dashboard stats received:', stats);
             
             // Set stats with debugging and inline styles for visibility
             const totalTasksEl = document.getElementById('total-tasks');
@@ -522,28 +506,24 @@ class TaskManager {
                 totalTasksEl.textContent = stats.total_tasks;
                 totalTasksEl.style.color = '#000000';
                 totalTasksEl.style.fontWeight = '700';
-                console.log('Set total tasks:', stats.total_tasks);
             }
             
             if (pendingTasksEl) {
                 pendingTasksEl.textContent = stats.pending_tasks;
                 pendingTasksEl.style.color = '#000000';
                 pendingTasksEl.style.fontWeight = '700';
-                console.log('Set pending tasks:', stats.pending_tasks);
             }
             
             if (inProgressTasksEl) {
                 inProgressTasksEl.textContent = stats.in_progress_tasks;
                 inProgressTasksEl.style.color = '#000000';
                 inProgressTasksEl.style.fontWeight = '700';
-                console.log('Set in progress tasks:', stats.in_progress_tasks);
             }
             
             if (completedTasksEl) {
                 completedTasksEl.textContent = stats.completed_tasks;
                 completedTasksEl.style.color = '#000000';
                 completedTasksEl.style.fontWeight = '700';
-                console.log('Set completed tasks:', stats.completed_tasks);
             }
             
             // Ensure stat card labels are visible
@@ -555,59 +535,46 @@ class TaskManager {
                 label.style.textTransform = 'uppercase';
                 label.style.letterSpacing = '0.05em';
             });
-            
-            console.log('Applied visibility styles to stat cards');
         } catch (error) {
-            console.error('Error loading dashboard stats:', error);
             // Error already handled in apiCall
         }
     }
 
     async loadUsers() {
-        console.log(`[loadUsers] Loading users...`);
         try {
             const result = await this.apiCall('/api/admin/users.php', 'GET');
-            console.log(`[loadUsers] Result:`, result);
             this.users = result.users;
             this.renderUsersTable();
             this.updateUserSelect();
         } catch (error) {
-            console.error(`[loadUsers] Error:`, error);
             // Error already handled in apiCall
         }
     }
 
     async loadAllTasks() {
-        console.log(`[loadAllTasks] Loading all tasks...`);
         try {
             const result = await this.apiCall('/api/admin/tasks.php', 'GET');
-            console.log(`[loadAllTasks] Result:`, result);
             this.tasks = result.tasks;
             this.renderTasksTable();
         } catch (error) {
-            console.error(`[loadAllTasks] Error:`, error);
+            // Error already handled in apiCall
         }
     }
 
     async loadUserTasks() {
-        console.log(`[loadUserTasks] Loading user tasks...`);
         try {
             const result = await this.apiCall('/api/user/tasks.php', 'GET');
-            console.log(`[loadUserTasks] Result:`, result);
             this.tasks = result.tasks;
             this.renderTasksTable();
         } catch (error) {
-            console.error(`[loadUserTasks] Error:`, error);
+            // Error already handled in apiCall
         }
     }
 
     renderUsersTable() {
-        console.log(`[renderUsersTable] Rendering users:`, this.users);
         if (!Array.isArray(this.users)) this.users = [];
         const tbody = document.querySelector('#users-table tbody');
         tbody.innerHTML = '';
-
-        console.log('Rendering users table with data:', this.users);
 
         this.users.forEach(user => {
             const row = document.createElement('tr');
@@ -669,7 +636,6 @@ class TaskManager {
     }
 
     filterTasks(tasks) {
-        console.log(`[filterTasks] Filtering tasks:`, tasks);
         if (!Array.isArray(tasks)) return [];
         const today = new Date().toISOString().slice(0, 10);
         switch (this.currentTaskFilter) {
@@ -702,7 +668,6 @@ class TaskManager {
     }
 
     renderTasksTable() {
-        console.log(`[renderTasksTable] Rendering tasks:`, this.tasks);
         if (!Array.isArray(this.tasks)) this.tasks = [];
         this.addTaskTableFilters();
         const tbody = document.querySelector('#tasks-table tbody');
@@ -957,7 +922,7 @@ class TaskManager {
         }, duration);
         
         // Log to console for debugging
-        console.log(`Toast [${type}]:`, message);
+        // console.log(`Toast [${type}]:`, message);
     }
 
     showLoading() {

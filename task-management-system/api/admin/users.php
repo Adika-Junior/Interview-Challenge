@@ -41,6 +41,7 @@ if (!$user || $user['role'] !== 'admin') {
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
+require_once __DIR__ . '/../classes/EmailService.php';
 $host = 'taskmanagement.mysql.database.azure.com';
 $db   = 'task_management';
 $dbuser = 'Pleasant';
@@ -71,6 +72,9 @@ try {
         $stmt->bind_param('ssss', $data['username'], $data['email'], $hashedPassword, $data['role']);
         $ok = $stmt->execute();
         if ($ok) {
+            // Send welcome email with credentials
+            $emailService = new EmailService();
+            $emailService->sendUserWelcomeEmail($data['email'], $data['username'], $data['password']);
             echo json_encode(['success' => true, 'user_id' => $con->insert_id]);
         } else {
             http_response_code(500);
