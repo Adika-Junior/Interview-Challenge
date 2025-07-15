@@ -1,89 +1,54 @@
 <?php
-// Include bootstrap for security and configuration
-require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../classes/User.php';
-
-// Ensure proper JSON response headers
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-cache, no-store, must-revalidate');
-header('Pragma: no-cache');
-header('Expires: 0');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST');
+header('Access-Control-Allow-Headers: Content-Type');
 
-// Function to send JSON response and exit
-function sendJsonResponse($data, $statusCode = 200) {
-    http_response_code($statusCode);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
+
+function sendResponse($data, $code = 200) {
+    http_response_code($code);
+    echo json_encode($data);
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendResponse(['error' => 'Method not allowed'], 405);
+}
+
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+
+if (!$data || !isset($data['username']) || !isset($data['password'])) {
+    sendResponse(['error' => 'Username and password required'], 400);
+}
+
+// Inline DB connection
+$host = getenv('DB_HOST') ?: 'localhost';
+$db   = getenv('DB_NAME') ?: 'task_management';
+$user = getenv('DB_USERNAME') ?: 'root';
+$pass = getenv('DB_PASSWORD') ?: '';
+$dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
 try {
-    // Check request method
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        logError('Invalid request method', ['method' => $_SERVER['REQUEST_METHOD']]);
-        sendJsonResponse(['error' => 'Method not allowed. Only POST requests are accepted.'], 405);
-    }
-
-    // Get and validate input
-    $data = getSanitizedJsonInput();
-    if (!$data) {
-        $input = file_get_contents('php://input');
-        if (empty($input)) {
-            logError('Empty request body');
-            sendJsonResponse(['error' => 'Request body is required.'], 400);
-        }
-        
-        $data = json_decode($input, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            logError('Invalid JSON in request body', [
-                'json_error' => json_last_error_msg(),
-                'input' => substr($input, 0, 200)
-            ]);
-            sendJsonResponse(['error' => 'Invalid JSON format in request body.'], 400);
-        }
-    }
-
-    // Validate required fields
-    try {
-        validateRequiredFields($data, ['username', 'password']);
-    } catch (Exception $e) {
-        logError('Missing required fields', ['error' => $e->getMessage(), 'provided_fields' => array_keys($data ?? [])]);
-        sendJsonResponse(['error' => $e->getMessage()], 400);
-    }
-
-    // Attempt login
-    $user = new User();
-    if ($user->login($data['username'], $data['password'])) {
-        $userInfo = $user->getCurrentUser();
-        
-        // Log successful login
-        logAppEvent('user_login_success', [
-            'username' => $data['username'],
-            'user_id' => $userInfo['id']
-        ]);
-        
-        sendJsonResponse(['success' => true, 'user' => $userInfo]);
-    } else {
-        // Log failed login attempt
-        logAppEvent('user_login_failed', [
-            'username' => $data['username'],
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-        ]);
-        
-        logError('Login failed - invalid credentials', [
-            'username' => $data['username'],
-            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-        ]);
-        
-        sendJsonResponse(['error' => 'Invalid username or password.'], 401);
-    }
-
-} catch (Exception $e) {
-    logError('Unexpected error during login', [
-        'error' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => $e->getTraceAsString()
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
-    
-    sendJsonResponse(['error' => 'An unexpected error occurred. Please try again later.'], 500);
+} catch (PDOException $e) {
+    sendResponse(['error' => 'Database connection failed'], 500);
+}
+
+// Inline user check
+$stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
+$stmt->execute([$data['username'], $data['username']]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($user && password_verify($data['password'], $user['password'])) {
+    sendResponse(['success' => true, 'user' => [
+        'id' => $user['id'],
+        'username' => $user['username'],
+        'role' => $user['role'],
+        'email' => $user['email']
+    ]]);
+} else {
+    sendResponse(['error' => 'Invalid credentials'], 401);
 }

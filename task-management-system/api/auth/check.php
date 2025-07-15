@@ -1,18 +1,23 @@
 <?php
-require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../classes/User.php';
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, GET');
+header('Access-Control-Allow-Headers: Content-Type');
 
-header('Content-Type: application/json');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
 
-try {
-    $user = new User();
-    if ($user->isLoggedIn()) {
-        echo json_encode(['user' => $user->getCurrentUser()]);
-    } else {
-        http_response_code(401);
-        echo json_encode(['error' => 'Not authenticated']);
-    }
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+session_start();
+
+if (isset($_SESSION['user_id'])) {
+    echo json_encode([
+        'user' => [
+            'id' => $_SESSION['user_id'],
+            'username' => $_SESSION['username'] ?? null,
+            'role' => $_SESSION['role'] ?? null,
+            'email' => $_SESSION['email'] ?? null
+        ]
+    ]);
+} else {
+    http_response_code(401);
+    echo json_encode(['error' => 'Not authenticated']);
 } 
