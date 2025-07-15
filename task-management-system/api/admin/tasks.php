@@ -31,6 +31,8 @@ $headers = function_exists('getallheaders') ? getallheaders() : [];
 $jwt = null;
 if (isset($headers['Authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['Authorization']);
+} elseif (isset($headers['authorization'])) {
+    $jwt = str_replace('Bearer ', '', $headers['authorization']);
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 error_log('ADMIN TASKS JWT payload: ' . json_encode($user));

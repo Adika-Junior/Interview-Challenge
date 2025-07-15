@@ -34,6 +34,8 @@ $headers = function_exists('getallheaders') ? getallheaders() : [];
 $jwt = null;
 if (isset($headers['Authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['Authorization']);
+} elseif (isset($headers['authorization'])) {
+    $jwt = str_replace('Bearer ', '', $headers['authorization']);
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || $user['role'] !== 'admin') {
