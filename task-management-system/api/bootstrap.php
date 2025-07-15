@@ -27,20 +27,8 @@ date_default_timezone_set('UTC');
 // Apply security headers
 SecurityMiddleware::applySecurityHeaders();
 
-// Set session parameters BEFORE session_start
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.use_strict_mode', 1);
-session_name('TASK_MANAGEMENT_SESSION');
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
-
-// Generate CSRF token if not exists
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = SecurityMiddleware::generateCSRFToken();
-}
+// Remove all session and CSRF logic for Vercel/serverless
+// Keep input sanitization and rate limiting
 
 // Rate limiting check
 $clientIP = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
@@ -152,7 +140,6 @@ function logAppEvent($event, $details = []) {
     $logEntry = [
         'timestamp' => date('Y-m-d H:i:s'),
         'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'user_id' => $_SESSION['user_id'] ?? 'guest',
         'event' => $event,
         'details' => $details,
         'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
@@ -177,7 +164,6 @@ function logError($level, $message, $context = []) {
         'level' => strtoupper($level),
         'message' => $message,
         'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'user_id' => $_SESSION['user_id'] ?? 'guest',
         'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
         'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
         'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',

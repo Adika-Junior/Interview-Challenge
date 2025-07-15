@@ -365,7 +365,7 @@ class TaskManager {
     async apiCall(endpoint, method = 'GET', data = null, suppressErrorToast = false) {
         const headers = {
             'Content-Type': 'application/json'
-        };
+            };
         if (this.jwtToken) {
             headers['Authorization'] = 'Bearer ' + this.jwtToken;
         }
@@ -375,8 +375,8 @@ class TaskManager {
             body: data ? JSON.stringify(data) : undefined
         });
         const text = await response.text();
-        let result;
-        try {
+            let result;
+            try {
             result = JSON.parse(text);
         } catch (e) {
             if (!suppressErrorToast) this.showToast('JSON parsing error: ' + e.message, 'error');
@@ -384,8 +384,8 @@ class TaskManager {
         }
         if (!response.ok && !suppressErrorToast) {
             this.showToast(result.error || 'API call failed', 'error');
-        }
-        return result;
+            }
+            return result;
     }
 
     async checkAuth() {
@@ -411,7 +411,7 @@ class TaskManager {
             const result = await this.apiCall('/api/auth/login.php', 'POST', { username, password });
             if (result && result.success && result.token) {
                 this.saveSession(result.token, result.user);
-                this.showDashboard();
+            this.showDashboard();
                 this.showToast('Login successful!', 'success');
             } else {
                 this.clearSession();
@@ -425,7 +425,7 @@ class TaskManager {
 
     async logout() {
         this.clearSession();
-        this.showLogin();
+            this.showLogin();
         this.showToast('Logged out successfully.', 'success');
     }
 

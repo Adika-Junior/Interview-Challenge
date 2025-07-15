@@ -36,13 +36,13 @@ class Config {
     
     public function getEmailConfig() {
         return [
-            'host' => $this->get('SMTP_HOST', 'smtp.gmail.com'),
-            'port' => $this->get('SMTP_PORT', 587),
-            'username' => $this->get('SMTP_USERNAME', ''),
-            'password' => $this->get('SMTP_PASSWORD', ''),
-            'encryption' => $this->get('SMTP_ENCRYPTION', 'tls'),
-            'from_email' => $this->get('FROM_EMAIL', 'noreply@taskmanagement.com'),
-            'from_name' => $this->get('FROM_NAME', 'Task Management System')
+            'host' => 'smtp.gmail.com',
+            'port' => 587,
+            'username' => 'pleasantview076@gmail.com',
+            'password' => 'fxud nkim kvnk raqa',
+            'encryption' => 'tls',
+            'from_email' => 'pleasantview076@gmail.com',
+            'from_name' => 'Task Management System'
         ];
     }
     

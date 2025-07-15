@@ -1,0 +1,56 @@
+\n===== Testing: auth/login.php (POST) =====
+
+==============================
+
+\n===== Testing: auth/logout.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: auth/check.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: admin/tasks.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: admin/users.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: admin/dashboard.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: admin/task_comments.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: user/dashboard.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: user/task_comments.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: user/task_comments_sse.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: user/tasks.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: user/tasks_sse.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: send_deadline_reminders.php (GET) =====
+nHTTP_STATUS:}
+==============================
+
+\n===== Testing: test.php (GET) =====
+nHTTP_STATUS:}
+==============================
+

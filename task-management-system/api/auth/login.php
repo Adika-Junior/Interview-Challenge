@@ -41,11 +41,11 @@ function sendResponse($data, $code = 200) {
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse(['error' => 'Method not allowed'], 405);
-}
+    }
 
-$input = file_get_contents('php://input');
+        $input = file_get_contents('php://input');
 $data = json_decode($input, true);
 
 if (!$data || !isset($data['username']) || !isset($data['password'])) {

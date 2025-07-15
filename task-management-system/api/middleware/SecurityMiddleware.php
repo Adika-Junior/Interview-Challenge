@@ -71,26 +71,23 @@ class SecurityMiddleware {
     }
     
     /**
-     * Validate CSRF token
+     * Validate CSRF token (removed for JWT-based auth)
      */
-    public static function validateCSRFToken($token) {
-        if (!isset($_SESSION['csrf_token'])) {
-            return false;
-        }
-        
-        return hash_equals($_SESSION['csrf_token'], $token);
-    }
-    
+    // public static function validateCSRFToken($token) {
+    //     return false;
+    // }
     /**
-     * Generate CSRF token
+     * Generate CSRF token (removed for JWT-based auth)
      */
-    public static function generateCSRFToken() {
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        
-        return $_SESSION['csrf_token'];
-    }
+    // public static function generateCSRFToken() {
+    //     return null;
+    // }
+    /**
+     * Session validation (removed for JWT-based auth)
+     */
+    // public static function validateSession() {
+    //     return true;
+    // }
     
     /**
      * Rate limiting check
@@ -177,32 +174,5 @@ class SecurityMiddleware {
         }
         
         file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND | LOCK_EX);
-    }
-    
-    /**
-     * Validate session
-     */
-    public static function validateSession() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        
-        // Regenerate session ID periodically
-        if (!isset($_SESSION['last_regeneration'])) {
-            $_SESSION['last_regeneration'] = time();
-        } elseif (time() - $_SESSION['last_regeneration'] > 300) { // 5 minutes
-            session_regenerate_id(true);
-            $_SESSION['last_regeneration'] = time();
-        }
-        
-        // Check session timeout
-        if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) { // 30 minutes
-            session_unset();
-            session_destroy();
-            return false;
-        }
-        
-        $_SESSION['last_activity'] = time();
-        return true;
     }
 } 
