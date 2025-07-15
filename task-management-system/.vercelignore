@@ -1,0 +1,8 @@
+logs/
+.env
+.env.*
+test_*.php
+setup_database.sh
+Dockerfile
+docker-compose.yml
+render.yaml 

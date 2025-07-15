@@ -503,3 +503,30 @@ Or if MySQL fails to start and you see multiple mysqld processes running:
 You should now be able to log in and use MySQL as normal.
 
 ---
+
+## Deployment on Vercel
+
+### 1. Environment Variables
+- Set all required variables (DB_HOST, DB_USERNAME, DB_PASSWORD, DB_NAME, etc.) in the Vercel dashboard under Project Settings > Environment Variables. Copy from your local `.env` file.
+
+### 2. Build Step
+- Vercel will automatically detect PHP, but you must install Composer dependencies. Add this as the build command in Vercel:
+  ```sh
+  composer install --no-dev --optimize-autoloader --no-interaction
+  ```
+
+### 3. Start/Run Command
+- **Vercel:** No explicit start command needed; Vercel serves PHP and static files automatically.
+- **Local Development:**
+  ```sh
+  php -S 127.0.0.1:8000 router.php
+  ```
+  (Run this from the `public/` directory.)
+
+### 4. Database
+- You must provide an external MySQL database (e.g., PlanetScale, Neon, AWS RDS, etc.). Vercel does not host databases.
+
+### 5. Notes
+- All API endpoints are available under `/api/`.
+- The frontend is served from `/public/index.html`.
+- If you need to ignore files from deployment, add a `.vercelignore` file (see Vercel docs).
