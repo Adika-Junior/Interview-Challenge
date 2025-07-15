@@ -366,7 +366,8 @@ class TaskManager {
     async apiCall(endpoint, method = 'GET', data = null, suppressErrorToast = false) {
         console.log(`[apiCall] ${method} ${endpoint}`, data);
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'User-Agent': navigator.userAgent // Add User-Agent header for Vercel
         };
         if (this.jwtToken) {
             headers['Authorization'] = 'Bearer ' + this.jwtToken;
