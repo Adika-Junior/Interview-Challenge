@@ -1,18 +1,64 @@
 <?php
-require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../classes/Task.php';
-require_once __DIR__ . '/../classes/User.php';
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-header('Content-Type: application/json');
+// JWT secret (should be the same for all endpoints)
+$jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
 
-// Check admin authentication using User class
-$user = new User();
-if (!$user->isAdmin()) {
+// Helper: Validate JWT and return user info
+function getUserFromJWT($jwt, $secret) {
+    if (!$jwt) return null;
+    $parts = explode('.', $jwt);
+    if (count($parts) !== 3) return null;
+    $payload = json_decode(base64_decode($parts[1]), true);
+    $sig = hash_hmac('sha256', $parts[0] . '.' . $parts[1], $secret, true);
+    if (base64_encode($sig) !== strtr($parts[2], '-_', '+/')) return null;
+    return $payload;
+}
+
+// Get JWT from Authorization header
+$headers = function_exists('getallheaders') ? getallheaders() : [];
+$jwt = null;
+if (isset($headers['Authorization'])) {
+    $jwt = str_replace('Bearer ', '', $headers['Authorization']);
+}
+$user = getUserFromJWT($jwt, $jwtSecret);
+if (!$user || $user['role'] !== 'admin') {
     http_response_code(403);
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
 
-$task = new Task();
-$stats = $task->getTaskStats();
+// DB connection (same as login.php)
+$host = 'taskmanagement.mysql.database.azure.com';
+$db   = 'task_management';
+$dbuser = 'Pleasant';
+$dbpass = 'Adika123';
+
+$con = mysqli_init();
+mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
+mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
+    echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+    exit;
+}
+
+// Example: Get total tasks, pending, in progress, completed
+$stats = [
+    'total_tasks' => 0,
+    'pending_tasks' => 0,
+    'in_progress_tasks' => 0,
+    'completed_tasks' => 0
+];
+$res = $con->query("SELECT status, COUNT(*) as count FROM tasks GROUP BY status");
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $stats['total_tasks'] += $row['count'];
+        if ($row['status'] === 'Pending') $stats['pending_tasks'] = $row['count'];
+        if ($row['status'] === 'In Progress') $stats['in_progress_tasks'] = $row['count'];
+        if ($row['status'] === 'Completed') $stats['completed_tasks'] = $row['count'];
+    }
+}
 echo json_encode(['stats' => $stats]);

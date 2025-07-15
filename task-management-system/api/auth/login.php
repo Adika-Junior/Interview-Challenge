@@ -4,6 +4,15 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// JWT secret (should match all endpoints)
+$jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
+function createJWT($payload, $secret) {
+    $header = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $payload = base64_encode(json_encode($payload));
+    $sig = base64_encode(hash_hmac('sha256', "$header.$payload", $secret, true));
+    return "$header.$payload.$sig";
+}
+
 // Global error handler for fatal errors
 register_shutdown_function(function() {
     $error = error_get_last();
@@ -67,14 +76,17 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if ($user && password_verify($data['password'], $user['password'])) {
+    $userPayload = [
+        'id' => $user['id'],
+        'username' => $user['username'],
+        'role' => $user['role'],
+        'email' => $user['email']
+    ];
+    $jwt = createJWT($userPayload, $jwtSecret);
     sendResponse([
         'success' => true,
-        'user' => [
-            'id' => $user['id'],
-            'username' => $user['username'],
-            'role' => $user['role'],
-            'email' => $user['email']
-        ]
+        'user' => $userPayload,
+        'token' => $jwt
     ]);
 } else {
     sendResponse(['error' => 'Invalid credentials'], 401);

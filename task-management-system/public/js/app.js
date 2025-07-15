@@ -151,12 +151,37 @@ class TaskManager {
     constructor() {
         this.baseUrl = '/api';
         this.currentUser = null;
+        this.jwtToken = null;
         this.users = [];
         this.tasks = [];
         this.userIdToDelete = null;
         this._lastTasksHash = '';
+        this.restoreSession();
         this.init();
         this.initTasksSSE();
+    }
+
+    restoreSession() {
+        const token = localStorage.getItem('jwt_token');
+        const user = localStorage.getItem('current_user');
+        if (token && user) {
+            this.jwtToken = token;
+            this.currentUser = JSON.parse(user);
+        }
+    }
+
+    saveSession(token, user) {
+        localStorage.setItem('jwt_token', token);
+        localStorage.setItem('current_user', JSON.stringify(user));
+        this.jwtToken = token;
+        this.currentUser = user;
+    }
+
+    clearSession() {
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('current_user');
+        this.jwtToken = null;
+        this.currentUser = null;
     }
 
     // SSE for subtle real-time tasks updates
@@ -338,66 +363,29 @@ class TaskManager {
     }
 
     async apiCall(endpoint, method = 'GET', data = null, suppressErrorToast = false) {
-        this.showLoading();
-        try {
-            const options = {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin',
-            };
-            if (data) {
-                options.body = JSON.stringify(data);
-            }
-            
-            console.log(`Making ${method} request to ${endpoint}`, data ? 'with data' : 'without data');
-            
-            const response = await fetch(endpoint, options);
-            console.log(`Response status: ${response.status} ${response.statusText}`);
-            
-            // Check if response has content
-            const responseText = await response.text();
-            console.log('Response text:', responseText);
-            
-            let result;
-            try {
-                // Try to parse as JSON
-                result = responseText ? JSON.parse(responseText) : {};
-            } catch (jsonError) {
-                console.error('JSON parsing error:', jsonError);
-                console.error('Response text that failed to parse:', responseText);
-                
-                // Create a structured error response
-                result = {
-                    error: 'Server returned invalid JSON response',
-                    details: responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''),
-                    status: response.status,
-                    statusText: response.statusText
-                };
-            }
-            
-            this.hideLoading();
-            
-            if (!response.ok) {
-                const errorMessage = result.error || result.message || `HTTP ${response.status}: ${response.statusText}`;
-                if (!suppressErrorToast) {
-                    this.showToast(errorMessage, 'error');
-                }
-                throw new Error(errorMessage);
-            }
-            
-            return result;
-        } catch (error) {
-            this.hideLoading();
-            console.error('API call error:', error);
-            
-            if (!suppressErrorToast) {
-                const errorMessage = error.message || 'Network error occurred';
-                this.showToast(errorMessage, 'error');
-            }
-            throw error;
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (this.jwtToken) {
+            headers['Authorization'] = 'Bearer ' + this.jwtToken;
         }
+        const response = await fetch(endpoint, {
+            method,
+            headers,
+            body: data ? JSON.stringify(data) : undefined
+        });
+        const text = await response.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            if (!suppressErrorToast) this.showToast('JSON parsing error: ' + e.message, 'error');
+            throw new Error('JSON parsing error: ' + e.message + '\nResponse text that failed to parse: ' + text);
+        }
+        if (!response.ok && !suppressErrorToast) {
+            this.showToast(result.error || 'API call failed', 'error');
+        }
+        return result;
     }
 
     async checkAuth() {
@@ -421,56 +409,24 @@ class TaskManager {
         const password = document.getElementById('password').value;
         try {
             const result = await this.apiCall('/api/auth/login.php', 'POST', { username, password });
-            this.currentUser = result.user;
-            this.showToast('Login successful!', 'success');
-            this.showDashboard();
+            if (result && result.success && result.token) {
+                this.saveSession(result.token, result.user);
+                this.showDashboard();
+                this.showToast('Login successful!', 'success');
+            } else {
+                this.clearSession();
+                this.showLogin();
+                this.showToast(result.error || 'Login failed', 'error');
+            }
         } catch (error) {
             // Error already handled in apiCall
         }
     }
 
     async logout() {
-        try {
-            await this.apiCall('/api/auth/logout.php', 'POST');
-            this.currentUser = null;
-            
-            // Show success toast and wait a moment before transitioning
-            this.showToast('Logged out successfully!', 'success');
-            
-            // Also show a temporary message in the login area
-            const loginBox = document.querySelector('.login-box');
-            if (loginBox) {
-                const successMsg = document.createElement('div');
-                successMsg.style.cssText = `
-                    background: #d4edda;
-                    color: #155724;
-                    padding: 10px;
-                    margin-bottom: 15px;
-                    border-radius: 5px;
-                    text-align: center;
-                    font-weight: 600;
-                    border: 1px solid #c3e6cb;
-                `;
-                successMsg.textContent = '✅ Logged out successfully!';
-                loginBox.insertBefore(successMsg, loginBox.firstChild);
-                
-                // Remove the message after 3 seconds
-                setTimeout(() => {
-                    if (successMsg.parentNode) {
-                        successMsg.remove();
-                    }
-                }, 3000);
-            }
-            
-            // Wait 1.5 seconds to ensure toast is visible
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            hideAllModals(); // Hide all modals on logout
-            this.showLogin();
-        } catch (error) {
-            // Error already handled in apiCall
-            hideAllModals(); // Defensive: Hide all modals on error
-        }
+        this.clearSession();
+        this.showLogin();
+        this.showToast('Logged out successfully.', 'success');
     }
 
     showLogin() {
