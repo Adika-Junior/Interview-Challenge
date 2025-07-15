@@ -1057,14 +1057,21 @@ class TaskManager {
         if (id) {
             // Editing: update all fields
             try {
-                await this.apiCall('/api/admin/tasks.php', 'PUT', { id, title, description, assigned_to, deadline, status });
+                const response = await this.apiCall('/api/admin/tasks.php', 'PUT', { id, title, description, assigned_to, deadline, status });
+                console.log('Task update response:', response);
+                if (!response || !response.success) {
+                    this.showToast(response && response.error ? response.error : 'Task update failed.', 'error');
+                    return;
+                }
                 this.showToast('Task updated!', 'success');
                 await this.loadAllTasks();
                 hideTaskModal();
                 // Remove status group after editing
                 const statusGroup = document.getElementById('admin-task-status-group');
                 if (statusGroup && statusGroup.parentNode) statusGroup.parentNode.removeChild(statusGroup);
-            } catch (error) {}
+            } catch (error) {
+                this.showToast('Task update failed.', 'error');
+            }
         } else {
             // Creating new task (existing logic)
             if (!title || !assigned_to || !deadline) {
@@ -1072,16 +1079,23 @@ class TaskManager {
                 return;
             }
             try {
-                await this.apiCall('/api/admin/tasks.php', 'POST', {
+                const response = await this.apiCall('/api/admin/tasks.php', 'POST', {
                     title,
                     description,
                     assigned_to,
                     deadline
                 });
+                console.log('Task create response:', response);
+                if (!response || !response.success) {
+                    this.showToast(response && response.error ? response.error : 'Task creation failed.', 'error');
+                    return;
+                }
                 this.showToast('Task added!', 'success');
                 await this.loadAllTasks();
                 hideTaskModal();
-            } catch (error) {}
+            } catch (error) {
+                this.showToast('Task creation failed.', 'error');
+            }
         }
         this.editingTaskId = null;
     }
