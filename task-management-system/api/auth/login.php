@@ -46,7 +46,7 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
 // Azure MySQL SSL connection using mysqli with server cert verification disabled
 $host = 'taskmanagement.mysql.database.azure.com';
 $db   = 'task_management';
-$user = 'Pleasant@taskmanagement';
+$user = 'Pleasant';
 $pass = 'Adika123';
 
 $con = mysqli_init();
