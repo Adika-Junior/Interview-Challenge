@@ -43,19 +43,15 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
     sendResponse(['error' => 'Username and password required'], 400);
 }
 
-// Azure MySQL SSL connection using mysqli with absolute path
+// Azure MySQL SSL connection using mysqli with server cert verification disabled
 $host = 'taskmanagement.mysql.database.azure.com';
 $db   = 'task_management';
 $user = 'Pleasant@taskmanagement';
 $pass = 'Adika123';
-$certPath = realpath(__DIR__ . '/../certs/BaltimoreCyberTrustRoot.crt.pem');
-
-if (!$certPath || !file_exists($certPath)) {
-    sendResponse(['error' => 'SSL certificate not found at: ' . $certPath], 500);
-}
 
 $con = mysqli_init();
-mysqli_ssl_set($con, NULL, NULL, $certPath, NULL, NULL);
+mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL); // No CA cert
+mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false); // Disable verification
 if (!mysqli_real_connect($con, $host, $user, $pass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
     sendResponse(['error' => 'Database connection failed: ' . mysqli_connect_error()], 500);
 }
