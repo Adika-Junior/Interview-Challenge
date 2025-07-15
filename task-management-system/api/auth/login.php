@@ -1,4 +1,8 @@
 <?php
+file_put_contents('/tmp/login_debug.log', "login.php hit at " . date('c') . "\n", FILE_APPEND);
+file_put_contents('/tmp/login_debug.log', "Request method: " . json_encode($_SERVER['REQUEST_METHOD']) . "\n", FILE_APPEND);
+file_put_contents('/tmp/login_debug.log', "Request headers: " . json_encode(getallheaders()) . "\n", FILE_APPEND);
+file_put_contents('/tmp/login_debug.log', "Request body: " . file_get_contents('php://input') . "\n", FILE_APPEND);
 // Include bootstrap for security and configuration
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../classes/User.php';

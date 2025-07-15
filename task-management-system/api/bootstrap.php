@@ -1,4 +1,5 @@
 <?php
+file_put_contents('/tmp/bootstrap_debug.log', "bootstrap.php hit at " . date('c') . "\n", FILE_APPEND);
 
 // Load Composer autoloader
 require_once __DIR__ . '/../vendor/autoload.php';
