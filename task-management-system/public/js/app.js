@@ -592,10 +592,16 @@ class TaskManager {
     async loadUserTasks() {
         try {
             const result = await this.apiCall('/api/user/tasks.php', 'GET');
-            this.tasks = result.tasks;
-            this.renderTasksTable();
+            if (result && Array.isArray(result.tasks)) {
+                this.tasks = result.tasks;
+                this.renderTasksTable();
+            } else {
+                this.tasks = [];
+                this.renderTasksTable('No tasks assigned yet.');
+            }
         } catch (error) {
-            // Error already handled in apiCall
+            this.tasks = [];
+            this.renderTasksTable('Could not load tasks. Please try again.');
         }
     }
 
@@ -695,41 +701,44 @@ class TaskManager {
         return str.trim();
     }
 
-    renderTasksTable() {
+    renderTasksTable(emptyMessage) {
         if (!Array.isArray(this.tasks)) this.tasks = [];
         this.addTaskTableFilters();
         const tbody = document.querySelector('#tasks-table tbody');
         if (!tbody) return;
-        // Fade out
         tbody.style.transition = 'opacity 0.3s';
         tbody.style.opacity = '0.3';
         const scrollTop = tbody.scrollTop;
         setTimeout(() => {
             tbody.innerHTML = '';
             const filtered = this.filterTasks(this.tasks);
-            filtered.forEach(task => {
-                const row = document.createElement('tr');
-                const statusClass = task.status.toLowerCase().replace(' ', '-');
-                const timeRemaining = this.getTimeRemaining(task.deadline);
-                row.innerHTML = `
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.id}</td>
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.title}</td>
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.description || 'No description'}</td>
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name}</td>
-                    <td><span class="status-badge status-${statusClass}">${task.status}</span></td>
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.deadline || ''}${timeRemaining ? `<br><span style='color:var(--text-muted);font-size:0.9em;'>${timeRemaining} left</span>` : ''}</td>
-                    <td class="action-buttons">
-                        ${this.getTaskActions(task)}
-                    </td>
-                `;
-                row.style.cursor = 'pointer';
-                row.onclick = (e) => {
-                    if (!e.target.closest('.action-buttons')) {
-                        this.openTaskModal(task);
-                    }
-                };
-                tbody.appendChild(row);
-            });
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888;font-style:italic;">${emptyMessage || 'No tasks assigned yet.'}</td></tr>`;
+            } else {
+                filtered.forEach(task => {
+                    const row = document.createElement('tr');
+                    const statusClass = task.status.toLowerCase().replace(' ', '-');
+                    const timeRemaining = this.getTimeRemaining(task.deadline);
+                    row.innerHTML = `
+                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.id}</td>
+                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.title}</td>
+                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.description || 'No description'}</td>
+                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name}</td>
+                        <td><span class="status-badge status-${statusClass}">${task.status}</span></td>
+                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.deadline || ''}${timeRemaining ? `<br><span style='color:var(--text-muted);font-size:0.9em;'>${timeRemaining} left</span>` : ''}</td>
+                        <td class="action-buttons">
+                            ${this.getTaskActions(task)}
+                        </td>
+                    `;
+                    row.style.cursor = 'pointer';
+                    row.onclick = (e) => {
+                        if (!e.target.closest('.action-buttons')) {
+                            this.openTaskModal(task);
+                        }
+                    };
+                    tbody.appendChild(row);
+                });
+            }
             tbody.scrollTop = scrollTop;
             tbody.style.opacity = '1';
         }, 200);
