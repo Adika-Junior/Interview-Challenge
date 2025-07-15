@@ -21,77 +21,83 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || $user['role'] !== 'admin') {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
-$host = 'taskmanagement.mysql.database.azure.com';
-$db   = 'task_management';
-$dbuser = 'Pleasant';
-$dbpass = 'Adika123';
-$con = mysqli_init();
-mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
-mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
-if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
-    echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+try {
+    $host = 'taskmanagement.mysql.database.azure.com';
+    $db   = 'task_management';
+    $dbuser = 'Pleasant';
+    $dbpass = 'Adika123';
+    $con = mysqli_init();
+    mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
+    mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+    if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
+        echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+        exit;
+    }
+    $method = $_SERVER['REQUEST_METHOD'];
+    if ($method === 'GET') {
+        $res = $con->query("SELECT * FROM tasks");
+        $tasks = [];
+        while ($row = $res->fetch_assoc()) $tasks[] = $row;
+        echo json_encode(['tasks' => $tasks]);
+    } elseif ($method === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['title'], $data['description'], $data['assigned_to'], $data['deadline'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields.']);
+            exit;
+        }
+        $assignedBy = $user['id'];
+        $stmt = $con->prepare("INSERT INTO tasks (title, description, assigned_to, assigned_by, deadline) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param('ssiss', $data['title'], $data['description'], $data['assigned_to'], $assignedBy, $data['deadline']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true, 'task_id' => $con->insert_id]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } elseif ($method === 'PUT') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['id'], $data['description'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields.']);
+            exit;
+        }
+        $stmt = $con->prepare("UPDATE tasks SET description = ? WHERE id = ?");
+        $stmt->bind_param('si', $data['description'], $data['id']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } elseif ($method === 'DELETE') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing task id.']);
+            exit;
+        }
+        $stmt = $con->prepare("DELETE FROM tasks WHERE id = ?");
+        $stmt->bind_param('i', $data['id']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed.']);
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
     exit;
-}
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'GET') {
-    $res = $con->query("SELECT * FROM tasks");
-    $tasks = [];
-    while ($row = $res->fetch_assoc()) $tasks[] = $row;
-    echo json_encode(['tasks' => $tasks]);
-} elseif ($method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['title'], $data['description'], $data['assigned_to'], $data['deadline'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing required fields.']);
-        exit;
-    }
-    $assignedBy = $user['id'];
-    $stmt = $con->prepare("INSERT INTO tasks (title, description, assigned_to, assigned_by, deadline) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param('ssiss', $data['title'], $data['description'], $data['assigned_to'], $assignedBy, $data['deadline']);
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true, 'task_id' => $con->insert_id]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} elseif ($method === 'PUT') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['id'], $data['description'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing required fields.']);
-        exit;
-    }
-    $stmt = $con->prepare("UPDATE tasks SET description = ? WHERE id = ?");
-    $stmt->bind_param('si', $data['description'], $data['id']);
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} elseif ($method === 'DELETE') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['id'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing task id.']);
-        exit;
-    }
-    $stmt = $con->prepare("DELETE FROM tasks WHERE id = ?");
-    $stmt->bind_param('i', $data['id']);
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} else {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed.']);
 }

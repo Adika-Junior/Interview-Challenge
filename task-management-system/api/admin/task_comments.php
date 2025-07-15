@@ -24,7 +24,7 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || $user['role'] !== 'admin') {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
@@ -38,8 +38,14 @@ switch ($_SERVER['REQUEST_METHOD']) {
             echo json_encode(['error' => 'Missing task_id.']);
             exit;
         }
-        $comments = $comment->getCommentsByTask($_GET['task_id']);
-        echo json_encode(['comments' => $comments]);
+        try {
+            $comments = $comment->getCommentsByTask($_GET['task_id']);
+            echo json_encode(['comments' => $comments]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+            exit;
+        }
         break;
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
@@ -48,9 +54,15 @@ switch ($_SERVER['REQUEST_METHOD']) {
             echo json_encode(['error' => 'Missing required fields.']);
             exit;
         }
-        $userId = $user['id'];
-        $commentId = $comment->addComment($data['task_id'], $userId, $data['comment'], 1);
-        echo json_encode(['success' => true, 'comment_id' => $commentId]);
+        try {
+            $userId = $user['id'];
+            $commentId = $comment->addComment($data['task_id'], $userId, $data['comment'], 1);
+            echo json_encode(['success' => true, 'comment_id' => $commentId]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+            exit;
+        }
         break;
     default:
         http_response_code(405);

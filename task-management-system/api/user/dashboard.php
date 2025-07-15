@@ -21,7 +21,7 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Login required.']);
     exit;
 }
@@ -32,8 +32,14 @@ $dbpass = 'Adika123';
 $con = mysqli_init();
 mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
 mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
-if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
-    echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+try {
+    if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
+        echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+        exit;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
     exit;
 }
 $userId = $user['id'];

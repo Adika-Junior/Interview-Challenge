@@ -362,6 +362,7 @@ class TaskManager {
         });
     }
 
+    // --- Robust API Call Utility ---
     async apiCall(endpoint, method = 'GET', data = null, suppressErrorToast = false) {
         const headers = {
             'Content-Type': 'application/json'
@@ -386,6 +387,15 @@ class TaskManager {
             this.showToast(result.error || 'API call failed', 'error');
             }
             return result;
+    }
+
+    // --- JWT Helper ---
+    parseJwt(token) {
+        try {
+            return JSON.parse(atob(token.split('.')[1]));
+        } catch (e) {
+            return null;
+        }
     }
 
     async checkAuth() {

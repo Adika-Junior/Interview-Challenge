@@ -25,49 +25,54 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Login required.']);
     exit;
 }
+try {
+    $comment = new TaskComment();
+    $task = new Task();
+    $userId = $user['id'];
 
-$comment = new TaskComment();
-$task = new Task();
-$userId = $user['id'];
-
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        if (!isset($_GET['task_id'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing task_id.']);
-            exit;
-        }
-        $taskInfo = $task->getTaskById($_GET['task_id']);
-        if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
-            http_response_code(403);
-            echo json_encode(['error' => 'You can only view comments for your own tasks.']);
-            exit;
-        }
-        $comments = $comment->getCommentsByTask($_GET['task_id']);
-        echo json_encode(['comments' => $comments]);
-        break;
-    case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!isset($data['task_id'], $data['comment'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields.']);
-            exit;
-        }
-        $taskInfo = $task->getTaskById($data['task_id']);
-        if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
-            http_response_code(403);
-            echo json_encode(['error' => 'You can only comment on your own tasks.']);
-            exit;
-        }
-        $commentId = $comment->addComment($data['task_id'], $userId, $data['comment'], 0);
-        echo json_encode(['success' => true, 'comment_id' => $commentId]);
-        break;
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed.']);
-        break;
+    switch ($_SERVER['REQUEST_METHOD']) {
+        case 'GET':
+            if (!isset($_GET['task_id'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing task_id.']);
+                exit;
+            }
+            $taskInfo = $task->getTaskById($_GET['task_id']);
+            if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
+                http_response_code(403);
+                echo json_encode(['error' => 'You can only view comments for your own tasks.']);
+                exit;
+            }
+            $comments = $comment->getCommentsByTask($_GET['task_id']);
+            echo json_encode(['comments' => $comments]);
+            break;
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!isset($data['task_id'], $data['comment'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing required fields.']);
+                exit;
+            }
+            $taskInfo = $task->getTaskById($data['task_id']);
+            if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
+                http_response_code(403);
+                echo json_encode(['error' => 'You can only comment on your own tasks.']);
+                exit;
+            }
+            $commentId = $comment->addComment($data['task_id'], $userId, $data['comment'], 0);
+            echo json_encode(['success' => true, 'comment_id' => $commentId]);
+            break;
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed.']);
+            break;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+    exit;
 } 

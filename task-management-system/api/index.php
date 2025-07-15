@@ -97,7 +97,7 @@ function handleAuth($method, $segments, &$response) {
 function handleUsers($method, $segments, &$response) {
     $user = new User();
     
-    if (!$user->isLoggedIn()) {
+    if (!($jwtUser = getJWTUser())) {
         $response['message'] = 'Authentication required';
         http_response_code(401);
         return;
@@ -105,7 +105,7 @@ function handleUsers($method, $segments, &$response) {
     
     switch ($method) {
         case 'GET':
-            if ($user->isAdmin()) {
+            if ($jwtUser['role'] === 'admin') {
                 $response['success'] = true;
                 $response['data'] = $user->getAllUsers();
             } else {
@@ -114,7 +114,7 @@ function handleUsers($method, $segments, &$response) {
             }
             break;
         case 'POST':
-            if ($user->isAdmin()) {
+            if ($jwtUser['role'] === 'admin') {
                 $data = json_decode(file_get_contents('php://input'), true);
                 $userId = $user->createUser($data['username'], $data['email'], $data['password'], $data['role']);
                 $response['success'] = true;
@@ -126,7 +126,7 @@ function handleUsers($method, $segments, &$response) {
             }
             break;
         case 'PUT':
-            if ($user->isAdmin() && isset($segments[1])) {
+            if ($jwtUser['role'] === 'admin' && isset($segments[1])) {
                 $data = json_decode(file_get_contents('php://input'), true);
                 $user->updateUser($segments[1], $data['username'], $data['email'], $data['role']);
                 $response['success'] = true;
@@ -137,7 +137,7 @@ function handleUsers($method, $segments, &$response) {
             }
             break;
         case 'DELETE':
-            if ($user->isAdmin() && isset($segments[1])) {
+            if ($jwtUser['role'] === 'admin' && isset($segments[1])) {
                 $user->deleteUser($segments[1]);
                 $response['success'] = true;
                 $response['message'] = 'User deleted successfully';
@@ -154,13 +154,13 @@ function handleTasks($method, $segments, &$response) {
     $user = new User();
     $task = new Task();
     
-    if (!$user->isLoggedIn()) {
+    if (!($jwtUser = getJWTUser())) {
         $response['message'] = 'Authentication required';
         http_response_code(401);
         return;
     }
     
-    $currentUser = $user->getCurrentUser();
+    $currentUser = $jwtUser;
     
     switch ($method) {
         case 'GET':
@@ -168,7 +168,7 @@ function handleTasks($method, $segments, &$response) {
                 // Get tasks for current user
                 $response['success'] = true;
                 $response['data'] = $task->getTasksByUser($currentUser['id']);
-            } elseif ($user->isAdmin()) {
+            } elseif ($jwtUser['role'] === 'admin') {
                 // Get all tasks (admin only)
                 $response['success'] = true;
                 $response['data'] = $task->getAllTasks();
@@ -178,7 +178,7 @@ function handleTasks($method, $segments, &$response) {
             }
             break;
         case 'POST':
-            if ($user->isAdmin()) {
+            if ($jwtUser['role'] === 'admin') {
                 $data = json_decode(file_get_contents('php://input'), true);
                 $taskId = $task->createTask(
                     $data['title'],
@@ -202,7 +202,7 @@ function handleTasks($method, $segments, &$response) {
                 if (isset($data['status'])) {
                     // Update task status (allowed for assigned user)
                     $taskInfo = $task->getTaskById($segments[1]);
-                    if ($taskInfo && ($taskInfo['assigned_to'] == $currentUser['id'] || $user->isAdmin())) {
+                    if ($taskInfo && ($taskInfo['assigned_to'] == $currentUser['id'] || $jwtUser['role'] === 'admin')) {
                         $task->updateTaskStatus($segments[1], $data['status']);
                         $response['success'] = true;
                         $response['message'] = 'Task status updated successfully';
@@ -212,7 +212,7 @@ function handleTasks($method, $segments, &$response) {
                     }
                 } else {
                     // Update task details (admin only)
-                    if ($user->isAdmin()) {
+                    if ($jwtUser['role'] === 'admin') {
                         $task->updateTask(
                             $segments[1],
                             $data['title'],
@@ -230,7 +230,7 @@ function handleTasks($method, $segments, &$response) {
             }
             break;
         case 'DELETE':
-            if ($user->isAdmin() && isset($segments[1])) {
+            if ($jwtUser['role'] === 'admin' && isset($segments[1])) {
                 $task->deleteTask($segments[1]);
                 $response['success'] = true;
                 $response['message'] = 'Task deleted successfully';
@@ -247,16 +247,16 @@ function handleDashboard($method, $segments, &$response) {
     $user = new User();
     $task = new Task();
     
-    if (!$user->isLoggedIn()) {
+    if (!($jwtUser = getJWTUser())) {
         $response['message'] = 'Authentication required';
         http_response_code(401);
         return;
     }
     
     if ($method === 'GET') {
-        $currentUser = $user->getCurrentUser();
+        $currentUser = $jwtUser;
         
-        if ($user->isAdmin()) {
+        if ($jwtUser['role'] === 'admin') {
             // Admin dashboard
             $stats = $task->getTaskStats();
             $recentTasks = $task->getAllTasks();
@@ -280,5 +280,13 @@ function handleDashboard($method, $segments, &$response) {
             ];
         }
     }
+}
+
+$jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
+function getJWTUser() {
+    global $jwtSecret;
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $jwt = isset($headers['Authorization']) ? str_replace('Bearer ', '', $headers['Authorization']) : null;
+    return User::getUserFromJWT($jwt, $jwtSecret);
 }
 ?>

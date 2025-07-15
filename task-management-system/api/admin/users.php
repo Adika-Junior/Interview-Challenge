@@ -21,7 +21,7 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || $user['role'] !== 'admin') {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
@@ -37,67 +37,73 @@ if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'GET') {
-    $res = $con->query("SELECT id, username, email, role, created_at FROM users");
-    $users = [];
-    while ($row = $res->fetch_assoc()) $users[] = $row;
-    echo json_encode(['users' => $users]);
-} elseif ($method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['username'], $data['email'], $data['password'], $data['role']) || empty($data['password'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing required fields or password.']);
-        exit;
-    }
-    $stmt = $con->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-    $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-    $stmt->bind_param('ssss', $data['username'], $data['email'], $hashedPassword, $data['role']);
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true, 'user_id' => $con->insert_id]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} elseif ($method === 'PUT') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['id'], $data['username'], $data['email'], $data['role'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing required fields.']);
-        exit;
-    }
-    if (!empty($data['password'])) {
-        $stmt = $con->prepare("UPDATE users SET username = ?, email = ?, role = ?, password = ? WHERE id = ?");
+try {
+    if ($method === 'GET') {
+        $res = $con->query("SELECT id, username, email, role, created_at FROM users");
+        $users = [];
+        while ($row = $res->fetch_assoc()) $users[] = $row;
+        echo json_encode(['users' => $users]);
+    } elseif ($method === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['username'], $data['email'], $data['password'], $data['role']) || empty($data['password'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields or password.']);
+            exit;
+        }
+        $stmt = $con->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
         $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-        $stmt->bind_param('ssssi', $data['username'], $data['email'], $data['role'], $hashedPassword, $data['id']);
+        $stmt->bind_param('ssss', $data['username'], $data['email'], $hashedPassword, $data['role']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true, 'user_id' => $con->insert_id]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } elseif ($method === 'PUT') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['id'], $data['username'], $data['email'], $data['role'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields.']);
+            exit;
+        }
+        if (!empty($data['password'])) {
+            $stmt = $con->prepare("UPDATE users SET username = ?, email = ?, role = ?, password = ? WHERE id = ?");
+            $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+            $stmt->bind_param('ssssi', $data['username'], $data['email'], $data['role'], $hashedPassword, $data['id']);
+        } else {
+            $stmt = $con->prepare("UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?");
+            $stmt->bind_param('sssi', $data['username'], $data['email'], $data['role'], $data['id']);
+        }
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } elseif ($method === 'DELETE') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing user id.']);
+            exit;
+        }
+        $stmt = $con->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->bind_param('i', $data['id']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
     } else {
-        $stmt = $con->prepare("UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?");
-        $stmt->bind_param('sssi', $data['username'], $data['email'], $data['role'], $data['id']);
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed.']);
     }
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} elseif ($method === 'DELETE') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    if (!isset($data['id'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing user id.']);
-        exit;
-    }
-    $stmt = $con->prepare("DELETE FROM users WHERE id = ?");
-    $stmt->bind_param('i', $data['id']);
-    $ok = $stmt->execute();
-    if ($ok) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => $stmt->error]);
-    }
-} else {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed.']);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+    exit;
 }

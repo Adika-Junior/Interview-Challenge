@@ -26,7 +26,7 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || $user['role'] !== 'admin') {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Admins only.']);
     exit;
 }
@@ -52,13 +52,19 @@ $stats = [
     'in_progress_tasks' => 0,
     'completed_tasks' => 0
 ];
-$res = $con->query("SELECT status, COUNT(*) as count FROM tasks GROUP BY status");
-if ($res) {
-    while ($row = $res->fetch_assoc()) {
-        $stats['total_tasks'] += $row['count'];
-        if ($row['status'] === 'Pending') $stats['pending_tasks'] = $row['count'];
-        if ($row['status'] === 'In Progress') $stats['in_progress_tasks'] = $row['count'];
-        if ($row['status'] === 'Completed') $stats['completed_tasks'] = $row['count'];
+try {
+    $res = $con->query("SELECT status, COUNT(*) as count FROM tasks GROUP BY status");
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $stats['total_tasks'] += $row['count'];
+            if ($row['status'] === 'Pending') $stats['pending_tasks'] = $row['count'];
+            if ($row['status'] === 'In Progress') $stats['in_progress_tasks'] = $row['count'];
+            if ($row['status'] === 'Completed') $stats['completed_tasks'] = $row['count'];
+        }
     }
+    echo json_encode(['stats' => $stats]);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+    exit;
 }
-echo json_encode(['stats' => $stats]);

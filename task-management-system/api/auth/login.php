@@ -76,18 +76,14 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if ($user && password_verify($data['password'], $user['password'])) {
-    $userPayload = [
+    $payload = [
         'id' => $user['id'],
         'username' => $user['username'],
-        'role' => $user['role'],
-        'email' => $user['email']
+        'email' => $user['email'],
+        'role' => $user['role']
     ];
-    $jwt = createJWT($userPayload, $jwtSecret);
-    sendResponse([
-        'success' => true,
-        'user' => $userPayload,
-        'token' => $jwt
-    ]);
+    $token = createJWT($payload, $jwtSecret);
+    sendResponse(['success' => true, 'user' => $payload, 'token' => $token]);
 } else {
     sendResponse(['error' => 'Invalid credentials'], 401);
 }

@@ -23,28 +23,33 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
-    http_response_code(403);
+    http_response_code(401);
     echo ": error\n";
     echo "data: {\"error\":\"Access denied. Login required.\"}\n\n";
     exit;
 }
+try {
+    $task = new Task();
+    $userId = $user['id'];
+    $lastHash = '';
 
-$task = new Task();
-$userId = $user['id'];
-$lastHash = '';
-
-while (true) {
-    $tasks = $task->getTasksByUser($userId);
-    $hash = md5(json_encode($tasks));
-    if ($hash !== $lastHash) {
-        echo "data: " . json_encode(['tasks' => $tasks]) . "\n\n";
+    while (true) {
+        $tasks = $task->getTasksByUser($userId);
+        $hash = md5(json_encode($tasks));
+        if ($hash !== $lastHash) {
+            echo "data: " . json_encode(['tasks' => $tasks]) . "\n\n";
+            ob_flush();
+            flush();
+            $lastHash = $hash;
+        }
+        // Send a comment to keep the connection alive every 10s
+        echo ": keepalive\n\n";
         ob_flush();
         flush();
-        $lastHash = $hash;
+        sleep(10);
     }
-    // Send a comment to keep the connection alive every 10s
-    echo ": keepalive\n\n";
-    ob_flush();
-    flush();
-    sleep(10);
+} catch (Exception $e) {
+    echo ": error\n";
+    echo "data: {\"error\":\"Server error\",\"details\":\"{$e->getMessage()}\"}\n\n";
+    exit;
 } 

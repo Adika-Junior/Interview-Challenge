@@ -24,7 +24,7 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
-    http_response_code(403);
+    http_response_code(401);
     echo json_encode(['error' => 'Access denied. Login required.']);
     exit;
 }
@@ -35,8 +35,14 @@ $userId = $user['id'];
 switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         // List tasks assigned to the logged-in user
-        $tasks = $task->getTasksByUser($userId);
-        echo json_encode(['tasks' => $tasks]);
+        try {
+            $tasks = $task->getTasksByUser($userId);
+            echo json_encode(['tasks' => $tasks]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+            exit;
+        }
         break;
     case 'PUT':
         // Update status of a task assigned to the user
@@ -47,18 +53,19 @@ switch ($_SERVER['REQUEST_METHOD']) {
             exit;
         }
         // Check if the task belongs to the user
-        $taskDetails = $task->getTaskById($data['id']);
-        if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
-            http_response_code(403);
-            echo json_encode(['error' => 'You can only update your own tasks.']);
-            exit;
-        }
         try {
+            $taskDetails = $task->getTaskById($data['id']);
+            if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
+                http_response_code(403);
+                echo json_encode(['error' => 'You can only update your own tasks.']);
+                exit;
+            }
             $task->updateTaskStatus($data['id'], $data['status']);
             echo json_encode(['success' => true]);
         } catch (Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+            exit;
         }
         break;
     default:

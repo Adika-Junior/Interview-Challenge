@@ -24,41 +24,47 @@ if (isset($headers['Authorization'])) {
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
-    http_response_code(403);
+    http_response_code(401);
     echo ": error\n";
     echo "data: {\"error\":\"Access denied. Login required.\"}\n\n";
     exit;
 }
 
-if (!isset($_GET['task_id'])) {
-    echo ": error\n";
-    echo "data: {\"error\":\"Missing task_id.\"}\n\n";
-    exit;
-}
+try {
+    if (!isset($_GET['task_id'])) {
+        echo ": error\n";
+        echo "data: {\"error\":\"Missing task_id.\"}\n\n";
+        exit;
+    }
 
-$taskId = (int)$_GET['task_id'];
-$task = new Task();
-$taskInfo = $task->getTaskById($taskId);
-$userId = $user['id'];
-if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
-    echo ": error\n";
-    echo "data: {\"error\":\"You can only view comments for your own tasks.\"}\n\n";
-    exit;
-}
+    $taskId = (int)$_GET['task_id'];
+    $task = new Task();
+    $taskInfo = $task->getTaskById($taskId);
+    $userId = $user['id'];
+    if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
+        echo ": error\n";
+        echo "data: {\"error\":\"You can only view comments for your own tasks.\"}\n\n";
+        exit;
+    }
 
-$comment = new TaskComment();
-$lastHash = '';
-while (true) {
-    $comments = $comment->getCommentsByTask($taskId);
-    $hash = md5(json_encode($comments));
-    if ($hash !== $lastHash) {
-        echo "data: " . json_encode(['comments' => $comments]) . "\n\n";
+    $comment = new TaskComment();
+    $lastHash = '';
+    while (true) {
+        $comments = $comment->getCommentsByTask($taskId);
+        $hash = md5(json_encode($comments));
+        if ($hash !== $lastHash) {
+            echo "data: " . json_encode(['comments' => $comments]) . "\n\n";
+            ob_flush();
+            flush();
+            $lastHash = $hash;
+        }
+        echo ": keepalive\n\n";
         ob_flush();
         flush();
-        $lastHash = $hash;
+        sleep(10);
     }
-    echo ": keepalive\n\n";
-    ob_flush();
-    flush();
-    sleep(10);
+} catch (Exception $e) {
+    echo ": error\n";
+    echo "data: {\"error\":\"Server error\",\"details\":\"{$e->getMessage()}\"}\n\n";
+    exit;
 } 
