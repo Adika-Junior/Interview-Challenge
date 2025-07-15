@@ -96,24 +96,7 @@ class SecurityMiddleware {
      * Rate limiting check
      */
     public static function checkRateLimit($identifier, $maxRequests = 100, $timeWindow = 3600) {
-        $cacheFile = sys_get_temp_dir() . '/rate_limit_' . md5($identifier) . '.txt';
-        
-        if (file_exists($cacheFile)) {
-            $data = json_decode(file_get_contents($cacheFile), true);
-            
-            if ($data['timestamp'] > time() - $timeWindow) {
-                if ($data['count'] >= $maxRequests) {
-                    return false; // Rate limit exceeded
-                }
-                $data['count']++;
-            } else {
-                $data = ['timestamp' => time(), 'count' => 1];
-            }
-        } else {
-            $data = ['timestamp' => time(), 'count' => 1];
-        }
-        
-        file_put_contents($cacheFile, json_encode($data));
+        // Disabled for Vercel/serverless compatibility
         return true;
     }
     

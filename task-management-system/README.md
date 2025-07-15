@@ -1,3 +1,26 @@
+# Vercel Deployment: Environment Variables
+
+To deploy this project on Vercel, you must set the following environment variables in your Vercel project dashboard (Settings > Environment Variables):
+
+- `DB_HOST` (e.g., your MySQL host)
+- `DB_USERNAME` (e.g., your MySQL username)
+- `DB_PASSWORD` (e.g., your MySQL password)
+- `DB_NAME` (e.g., your MySQL database name)
+- `APP_ENV` (e.g., production)
+- `APP_DEBUG` (e.g., false)
+- `APP_URL` (e.g., https://your-vercel-url)
+- `SESSION_SECRET` (any random string)
+- `JWT_SECRET` (any random string)
+- Any other variables from your local .env file
+
+**How to set:**
+1. Go to your project on Vercel.
+2. Click on Settings > Environment Variables.
+3. Add each variable and its value.
+4. Redeploy your project after saving.
+
+---
+
 # Task Management System
 
 A simple, object-oriented PHP and vanilla JavaScript application for managing users and tasks. Built for interview demonstration purposes.

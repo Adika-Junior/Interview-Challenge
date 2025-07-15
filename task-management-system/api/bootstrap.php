@@ -33,6 +33,12 @@ ini_set('session.cookie_secure', 1);
 ini_set('session.cookie_samesite', 'Strict');
 ini_set('session.use_strict_mode', 1);
 session_name('TASK_MANAGEMENT_SESSION');
+
+// Use MySQL session handler
+require_once __DIR__ . '/classes/MySQLSessionHandler.php';
+$pdo = (new Database())->getConnection();
+$handler = new MySQLSessionHandler($pdo);
+session_set_save_handler($handler, true);
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
@@ -70,6 +76,16 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
             break;
         }
     }
+}
+
+// Set CORS and cookie headers for API responses
+header('Access-Control-Allow-Origin: https://your-frontend-url'); // TODO: Replace with your actual frontend URL
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
 }
 
 // Function to sanitize all input data
