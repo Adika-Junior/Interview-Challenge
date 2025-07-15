@@ -707,11 +707,12 @@ class TaskManager {
                 const row = document.createElement('tr');
                 const statusClass = task.status.toLowerCase().replace(' ', '-');
                 const timeRemaining = this.getTimeRemaining(task.deadline);
+                // Use assigned_to_name for the 'Assigned To' column
                 row.innerHTML = `
                     <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.id}</td>
                     <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.title}</td>
                     <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.description || 'No description'}</td>
-                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name}</td>
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name || ''}</td>
                     <td><span class="status-badge status-${statusClass}">${task.status}</span></td>
                     <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.deadline || ''}${timeRemaining ? `<br><span style='color:var(--text-muted);font-size:0.9em;'>${timeRemaining} left</span>` : ''}</td>
                     <td class="action-buttons">
