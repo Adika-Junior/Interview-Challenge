@@ -79,7 +79,7 @@ if (isset($_SERVER['HTTP_USER_AGENT'])) {
 }
 
 // Set CORS and cookie headers for API responses
-header('Access-Control-Allow-Origin: https://your-frontend-url'); // TODO: Replace with your actual frontend URL
+header('Access-Control-Allow-Origin: https://interview-challenge-lac.vercel.app');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
