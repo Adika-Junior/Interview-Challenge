@@ -214,7 +214,9 @@ class TaskManager {
             const startSSE = () => {
                 if (evtSource) evtSource.close();
                 if (!this.currentUser || this.currentUser.role !== 'user') return;
-                evtSource = new EventSource('/api/user/tasks_sse.php');
+                const jwt = this.jwtToken || localStorage.getItem('jwt_token');
+                if (!jwt) return;
+                evtSource = new EventSource('/api/user/tasks_sse.php?token=' + encodeURIComponent(jwt));
                 evtSource.onmessage = (e) => {
                     try {
                         const resp = JSON.parse(e.data);
@@ -229,7 +231,6 @@ class TaskManager {
                     } catch (err) {}
                 };
                 evtSource.onerror = () => {
-                    // Try to reconnect after a delay
                     setTimeout(startSSE, 5000);
                 };
             };

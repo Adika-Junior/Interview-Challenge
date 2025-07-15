@@ -22,6 +22,8 @@ if (isset($headers['Authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['Authorization']);
 } elseif (isset($headers['authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['authorization']);
+} elseif (isset($_GET['token'])) {
+    $jwt = $_GET['token'];
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
 if (!$user || !isset($user['id'])) {
