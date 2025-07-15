@@ -7,10 +7,12 @@ class Config {
     private $env;
     
     private function __construct() {
-        // Load .env file from the project root (2 levels up from api/config/)
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
-        $dotenv->load();
-        
+        // Load .env file from the project root (2 levels up from api/config/) if it exists
+        $dotenvPath = __DIR__ . '/../../';
+        if (file_exists($dotenvPath . '.env')) {
+            $dotenv = Dotenv\Dotenv::createImmutable($dotenvPath);
+            $dotenv->load();
+        }
         $this->env = $_ENV;
     }
     
