@@ -109,3 +109,10 @@ if ($user && password_verify($data['password'], $user['password'])) {
 } else {
     sendResponse(['error' => 'Invalid credentials'], 401);
 }
+
+// At the end of the file, add a catch-all error handler
+if (!headers_sent()) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Unknown server error.']);
+    exit;
+}

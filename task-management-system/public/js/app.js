@@ -58,10 +58,34 @@ function showTaskModal(task = null) {
             const adminForm = document.getElementById('admin-comment-form');
             if (userForm) userForm.style.display = (window.app.currentUser && window.app.currentUser.role === 'user') ? 'flex' : 'none';
             if (adminForm) adminForm.style.display = (window.app.currentUser && window.app.currentUser.role === 'admin') ? 'flex' : 'none';
+            // Add status dropdown for users
+            if (window.app.currentUser && window.app.currentUser.role === 'user') {
+                let statusGroup = document.getElementById('user-task-status-group');
+                if (!statusGroup) {
+                    statusGroup = document.createElement('div');
+                    statusGroup.className = 'form-group';
+                    statusGroup.id = 'user-task-status-group';
+                    const form = modal.querySelector('form');
+                    form.insertBefore(statusGroup, form.querySelector('.form-actions'));
+                }
+                statusGroup.innerHTML = `<label for="user-task-status">Status:</label>
+                    <select id="user-task-status">
+                        <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                    </select>`;
+                // Add event listener to update status
+                document.getElementById('user-task-status').onchange = async function() {
+                    await window.app.updateTaskStatus(task.id, this.value);
+                };
+            }
         } else if (window.app) {
             window.app.editingTaskId = null;
             window.app.renderTaskComments([]);
             window.app.removeCommentsSection();
+            // Remove status group if present
+            const statusGroup = document.getElementById('user-task-status-group');
+            if (statusGroup && statusGroup.parentNode) statusGroup.parentNode.removeChild(statusGroup);
         }
         // Reset comment inputs
         const userInput = document.getElementById('user-comment-input');
@@ -386,11 +410,15 @@ class TaskManager {
         try {
             result = JSON.parse(text);
         } catch (e) {
-            if (!suppressErrorToast) this.showToast('JSON parsing error: ' + e.message, 'error');
+            if (!suppressErrorToast) {
+                this.showToast('Server error: Invalid response. Please try again later.', 'error');
+                // Optionally log the raw response for debugging
+                // console.error('Failed to parse JSON:', text);
+            }
             throw new Error('JSON parsing error: ' + e.message + '\nResponse text that failed to parse: ' + text);
         }
         if (!response.ok && !suppressErrorToast) {
-            this.showToast(result.error || 'API call failed', 'error');
+            this.showToast(result.error || 'Request failed', 'error');
         }
         return result;
     }
@@ -935,7 +963,7 @@ class TaskManager {
 
     // Add editUser and editTask for modal population
     editUser(id) {
-        const user = this.users.find(u => u.id === id);
+        const user = this.users.find(u => u.id == id);
         if (user) {
             this.editingUserId = id;
             // Pre-fill modal fields
@@ -944,24 +972,51 @@ class TaskManager {
             document.getElementById('user-email').value = user.email;
             document.getElementById('user-password').value = '';
             document.getElementById('user-role').value = user.role;
-            showUserModal();
+            // Always show the modal
+            const modal = document.getElementById('user-modal');
+            if (modal) {
+                modal.hidden = false;
+                modal.style.display = 'flex';
+            }
         }
     }
 
+    // --- Edit Task Functionality for Admins ---
     editTask(id) {
-        const task = this.tasks.find(t => t.id === id);
+        const task = this.tasks.find(t => t.id == id);
         if (task) {
             this.editingTaskId = id;
-            // Pre-fill modal fields for description editing
+            // Enable all fields for editing
             document.getElementById('task-title').value = task.title;
-            document.getElementById('task-title').disabled = true;
+            document.getElementById('task-title').disabled = false;
             document.getElementById('task-description').value = task.description;
+            document.getElementById('task-description').disabled = false;
             document.getElementById('task-assigned-to').value = task.assigned_to;
-            document.getElementById('task-assigned-to').disabled = true;
+            document.getElementById('task-assigned-to').disabled = false;
             document.getElementById('task-deadline').value = task.deadline;
-            document.getElementById('task-deadline').disabled = true;
-            document.getElementById('task-modal-title').textContent = 'Edit Task Description';
-            showTaskModal(task);
+            document.getElementById('task-deadline').disabled = false;
+            document.getElementById('task-modal-title').textContent = 'Edit Task';
+            // Optionally add status dropdown for admin
+            let statusGroup = document.getElementById('admin-task-status-group');
+            if (!statusGroup) {
+                statusGroup = document.createElement('div');
+                statusGroup.className = 'form-group';
+                statusGroup.id = 'admin-task-status-group';
+                const form = document.getElementById('task-form');
+                form.insertBefore(statusGroup, form.querySelector('.form-actions'));
+            }
+            statusGroup.innerHTML = `<label for="admin-task-status">Status:</label>
+                <select id="admin-task-status">
+                    <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                    <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                </select>`;
+            // Show the modal
+            const modal = document.getElementById('task-modal');
+            if (modal) {
+                modal.hidden = false;
+                modal.style.display = 'flex';
+            }
         }
     }
 
@@ -993,22 +1048,29 @@ class TaskManager {
         this.editingUserId = null;
     }
 
+    // --- Save Task (Admin) ---
     async saveTask() {
         const id = this.editingTaskId;
+        const title = document.getElementById('task-title').value;
         const description = document.getElementById('task-description').value;
+        const assigned_to = document.getElementById('task-assigned-to').value;
+        const deadline = document.getElementById('task-deadline').value;
+        let status = null;
+        const statusInput = document.getElementById('admin-task-status');
+        if (statusInput) status = statusInput.value;
         if (id) {
-            // Editing: only update description
+            // Editing: update all fields
             try {
-                await this.apiCall('/api/admin/tasks.php', 'PUT', { id, description });
-                this.showToast('Task description updated!', 'success');
+                await this.apiCall('/api/admin/tasks.php', 'PUT', { id, title, description, assigned_to, deadline, status });
+                this.showToast('Task updated!', 'success');
                 await this.loadAllTasks();
                 hideTaskModal();
+                // Remove status group after editing
+                const statusGroup = document.getElementById('admin-task-status-group');
+                if (statusGroup && statusGroup.parentNode) statusGroup.parentNode.removeChild(statusGroup);
             } catch (error) {}
         } else {
-            // Creating new task
-            const title = document.getElementById('task-title').value;
-            const assigned_to = document.getElementById('task-assigned-to').value;
-            const deadline = document.getElementById('task-deadline').value;
+            // Creating new task (existing logic)
             if (!title || !assigned_to || !deadline) {
                 this.showToast('Please fill in all required fields.', 'error');
                 return;
@@ -1025,6 +1087,7 @@ class TaskManager {
                 hideTaskModal();
             } catch (error) {}
         }
+        this.editingTaskId = null;
     }
 
     async deleteUser(id) {
@@ -1063,6 +1126,19 @@ class TaskManager {
                 await this.loadAllTasks();
             }
         } catch (error) {}
+    }
+
+    // --- Delete Task Functionality for Admins ---
+    deleteTask(id) {
+        if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
+        this.apiCall('/api/admin/tasks.php', 'DELETE', { id })
+            .then(() => {
+                this.showToast('Task deleted!', 'success');
+                this.loadAllTasks();
+            })
+            .catch(() => {
+                this.showToast('Failed to delete task.', 'error');
+            });
     }
 }
 
