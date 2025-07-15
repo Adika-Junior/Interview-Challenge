@@ -14,9 +14,11 @@ $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
 // Database configuration from .env
-$dbHost = $_ENV['DB_HOST'] ?? 'localhost';
-$dbUsername = $_ENV['DB_USERNAME'] ?? 'root';
-$dbPassword = $_ENV['DB_PASSWORD'] ?? '';
+// For Azure, use the full server name as host, e.g. taskmanagement.mysql.database.azure.com
+// For Azure, username is just the admin name, e.g. Pleasant
+$dbHost = $_ENV['DB_HOST'] ?? 'taskmanagement.mysql.database.azure.com';
+$dbUsername = $_ENV['DB_USERNAME'] ?? 'Pleasant';
+$dbPassword = $_ENV['DB_PASSWORD'] ?? 'Adika123';
 $dbName = $_ENV['DB_NAME'] ?? 'task_management';
 
 // Admin user configuration from .env
@@ -33,12 +35,15 @@ if (empty($adminPasswordHash)) {
 try {
     // Connect to database
     $pdo = new PDO(
-        "mysql:host={$dbHost};dbname={$dbName}",
+        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4;port=3306",
         $dbUsername,
         $dbPassword,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
+            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+            PDO::MYSQL_ATTR_SSL_CA => null // Set to CA cert path if you want full verification
         ]
     );
     

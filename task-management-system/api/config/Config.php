@@ -27,9 +27,11 @@ class Config {
     
     public function getDatabaseConfig() {
         return [
-            'host' => $this->get('DB_HOST', 'localhost'),
-            'username' => $this->get('DB_USERNAME', 'root'),
-            'password' => $this->get('DB_PASSWORD', ''),
+            // For Azure, use the full server name as host, e.g. taskmanagement.mysql.database.azure.com
+            'host' => $this->get('DB_HOST', 'taskmanagement.mysql.database.azure.com'),
+            // For Azure, username is just the admin name (not admin@server), e.g. Pleasant
+            'username' => $this->get('DB_USERNAME', 'Pleasant'),
+            'password' => $this->get('DB_PASSWORD', 'Adika123'),
             'database' => $this->get('DB_NAME', 'task_management')
         ];
     }

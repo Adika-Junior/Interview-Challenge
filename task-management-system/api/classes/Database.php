@@ -21,16 +21,22 @@ class Database {
     
     public function connect() {
         try {
+            // Azure requires sslmode=require. Add it to the DSN.
+            $dsn = "mysql:host={$this->host};dbname={$this->database};charset=utf8mb4;port=3306";
+            // For Azure, SSL is required. Add PDO::MYSQL_ATTR_SSL_CA if you want to enforce CA verification.
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // Azure default, set to true if you upload CA cert
+                PDO::MYSQL_ATTR_SSL_CA => null // You can set to path to CA cert if you want full verification
+            ];
             $this->connection = new PDO(
-                "mysql:host={$this->host};dbname={$this->database};charset=utf8mb4",
+                $dsn,
                 $this->username,
                 $this->password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
-                ]
+                $options
             );
             return $this->connection;
         } catch (PDOException $e) {
@@ -41,7 +47,6 @@ class Database {
                 'error_code' => $e->getCode(),
                 'error_message' => $e->getMessage()
             ]);
-            
             // Return a generic error response
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(500);
