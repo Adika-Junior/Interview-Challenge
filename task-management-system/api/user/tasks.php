@@ -67,45 +67,54 @@ if (!$user || !isset($user['id'])) {
 $task = new Task();
 $userId = $user['id'];
 
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        // List tasks assigned to the logged-in user
-        try {
-        $tasks = $task->getTasksByUser($userId);
-        echo json_encode(['tasks' => $tasks]);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
-            exit;
-        }
-        break;
-    case 'PUT':
-        // Update status of a task assigned to the user
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (!isset($data['id'], $data['status'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields.']);
-            exit;
-        }
-        // Check if the task belongs to the user
-        try {
-        $taskDetails = $task->getTaskById($data['id']);
-        if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
-                logDebug(['error' => 'You can only update your own tasks.', 'taskDetails' => $taskDetails, 'userId' => $userId]);
-            http_response_code(403);
-            echo json_encode(['error' => 'You can only update your own tasks.']);
-            exit;
-        }
-            $task->updateTaskStatus($data['id'], $data['status']);
-            echo json_encode(['success' => true]);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
-            exit;
-        }
-        break;
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed.']);
-        break;
+try {
+    switch ($_SERVER['REQUEST_METHOD']) {
+        case 'GET':
+            // List tasks assigned to the logged-in user
+            try {
+            $tasks = $task->getTasksByUser($userId);
+            echo json_encode(['tasks' => $tasks]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+                exit;
+            }
+            break;
+        case 'PUT':
+            // Update status of a task assigned to the user
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!isset($data['id'], $data['status'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing required fields.']);
+                exit;
+            }
+            // Check if the task belongs to the user
+            try {
+            $taskDetails = $task->getTaskById($data['id']);
+            if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
+                    logDebug(['error' => 'You can only update your own tasks.', 'taskDetails' => $taskDetails, 'userId' => $userId]);
+                http_response_code(403);
+                echo json_encode(['error' => 'You can only update your own tasks.']);
+                exit;
+            }
+                $task->updateTaskStatus($data['id'], $data['status']);
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+                exit;
+            }
+            break;
+        default:
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed.']);
+            break;
+    }
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+    ]);
+    exit;
 }
