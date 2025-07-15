@@ -73,4 +73,12 @@ if ($res) {
         if ($row['status'] === 'Completed') $stats['completed_tasks'] = $row['count'];
     }
 }
-echo json_encode(['stats' => $stats]);
+$tasks = [];
+$resTasks = $con->query("SELECT t.*, u1.username as assigned_to_name, u2.username as assigned_by_name FROM tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id LEFT JOIN users u2 ON t.assigned_by = u2.id WHERE t.assigned_to = " . intval($userId) . " ORDER BY t.created_at DESC");
+if ($resTasks) {
+    while ($row = $resTasks->fetch_assoc()) {
+        $tasks[] = $row;
+    }
+}
+
+echo json_encode(['stats' => $stats, 'tasks' => $tasks]);

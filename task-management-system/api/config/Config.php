@@ -52,7 +52,7 @@ class Config {
         return [
             'env' => $this->get('APP_ENV', 'development'),
             'debug' => $this->get('APP_DEBUG', 'true') === 'true',
-            'url' => $this->get('APP_URL', 'http://localhost:8000'),
+            'url' => $this->get('APP_URL', 'https://interview-challenge-lac.vercel.app'),
             'session_secret' => $this->get('SESSION_SECRET', 'default-secret-key'),
             'jwt_secret' => $this->get('JWT_SECRET', 'default-jwt-secret')
         ];

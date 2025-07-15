@@ -97,6 +97,13 @@ try {
         }
         $ok = $stmt->execute();
         if ($ok) {
+            // Send updated credentials email
+            $emailService = new EmailService();
+            if (!empty($data['password'])) {
+                $emailService->sendUserWelcomeEmail($data['email'], $data['username'], $data['password']);
+            } else {
+                $emailService->sendUserWelcomeEmail($data['email'], $data['username'], '[unchanged]');
+            }
             echo json_encode(['success' => true]);
         } else {
             http_response_code(500);
