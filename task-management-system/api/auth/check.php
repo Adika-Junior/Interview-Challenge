@@ -8,14 +8,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
 
 // JWT secret (should match all endpoints)
 $jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
+function base64url_encode($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+function base64url_decode($data) {
+    $remainder = strlen($data) % 4;
+    if ($remainder) {
+        $padlen = 4 - $remainder;
+        $data .= str_repeat('=', $padlen);
+    }
+    return base64_decode(strtr($data, '-_', '+/'));
+}
 function getUserFromJWT($jwt, $secret) {
     if (!$jwt) return null;
     $parts = explode('.', $jwt);
     if (count($parts) !== 3) return null;
-    $payload = json_decode(base64_decode($parts[1]), true);
-    $sig = hash_hmac('sha256', $parts[0] . '.' . $parts[1], $secret, true);
-    if (base64_encode($sig) !== strtr($parts[2], '-_', '+/')) return null;
-    return $payload;
+    $header = $parts[0];
+    $payload = $parts[1];
+    $sig = $parts[2];
+    $expected_sig = base64url_encode(hash_hmac('sha256', "$header.$payload", $secret, true));
+    if (!hash_equals($expected_sig, $sig)) return null;
+    return json_decode(base64url_decode($payload), true);
 }
 $headers = function_exists('getallheaders') ? getallheaders() : [];
 $jwt = null;

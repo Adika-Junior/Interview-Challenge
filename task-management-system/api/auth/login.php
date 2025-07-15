@@ -6,11 +6,33 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 // JWT secret (should match all endpoints)
 $jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
+function base64url_encode($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+function base64url_decode($data) {
+    $remainder = strlen($data) % 4;
+    if ($remainder) {
+        $padlen = 4 - $remainder;
+        $data .= str_repeat('=', $padlen);
+    }
+    return base64_decode(strtr($data, '-_', '+/'));
+}
 function createJWT($payload, $secret) {
-    $header = base64_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
-    $payload = base64_encode(json_encode($payload));
-    $sig = base64_encode(hash_hmac('sha256', "$header.$payload", $secret, true));
+    $header = base64url_encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $payload = base64url_encode(json_encode($payload));
+    $sig = base64url_encode(hash_hmac('sha256', "$header.$payload", $secret, true));
     return "$header.$payload.$sig";
+}
+function getUserFromJWT($jwt, $secret) {
+    if (!$jwt) return null;
+    $parts = explode('.', $jwt);
+    if (count($parts) !== 3) return null;
+    $header = $parts[0];
+    $payload = $parts[1];
+    $sig = $parts[2];
+    $expected_sig = base64url_encode(hash_hmac('sha256', "$header.$payload", $secret, true));
+    if (!hash_equals($expected_sig, $sig)) return null;
+    return json_decode(base64url_decode($payload), true);
 }
 
 // Global error handler for fatal errors
