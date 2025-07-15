@@ -4,6 +4,26 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Global error handler for fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Internal server error (shutdown): ' . $error['message']]);
+        exit;
+    }
+});
+set_exception_handler(function($e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Internal server error (exception): ' . $e->getMessage()]);
+    exit;
+});
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    echo json_encode(['error' => "Internal server error (handler): $errstr in $errfile on line $errline"]);
+    exit;
+});
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
 
 function sendResponse($data, $code = 200) {
@@ -23,12 +43,16 @@ if (!$data || !isset($data['username']) || !isset($data['password'])) {
     sendResponse(['error' => 'Username and password required'], 400);
 }
 
-// Azure MySQL SSL connection using mysqli
+// Azure MySQL SSL connection using mysqli with absolute path
 $host = 'taskmanagement.mysql.database.azure.com';
 $db   = 'task_management';
 $user = 'Pleasant@taskmanagement';
 $pass = 'Adika123';
-$certPath = __DIR__ . '/../certs/BaltimoreCyberTrustRoot.crt.pem';
+$certPath = realpath(__DIR__ . '/../certs/BaltimoreCyberTrustRoot.crt.pem');
+
+if (!$certPath || !file_exists($certPath)) {
+    sendResponse(['error' => 'SSL certificate not found at: ' . $certPath], 500);
+}
 
 $con = mysqli_init();
 mysqli_ssl_set($con, NULL, NULL, $certPath, NULL, NULL);
@@ -47,12 +71,15 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if ($user && password_verify($data['password'], $user['password'])) {
-    sendResponse(['success' => true, 'user' => [
-        'id' => $user['id'],
-        'username' => $user['username'],
-        'role' => $user['role'],
-        'email' => $user['email']
-    ]]);
+    sendResponse([
+        'success' => true,
+        'user' => [
+            'id' => $user['id'],
+            'username' => $user['username'],
+            'role' => $user['role'],
+            'email' => $user['email']
+        ]
+    ]);
 } else {
     sendResponse(['error' => 'Invalid credentials'], 401);
 }
