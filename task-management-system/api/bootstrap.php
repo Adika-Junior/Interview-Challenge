@@ -136,47 +136,33 @@ function validatePassword($password) {
 }
 
 // Function to log application events
-function logAppEvent($event, $details = []) {
-    $logEntry = [
-        'timestamp' => date('Y-m-d H:i:s'),
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'event' => $event,
-        'details' => $details,
-        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-        'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-        'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown'
-    ];
-    
-    $logFile = __DIR__ . '/../logs/app.log';
-    $logDir = dirname($logFile);
-    
+function logAppEvent($event, $context = []) {
+    $logDir = '/tmp/logs';
+    $logFile = $logDir . '/error.log';
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
     }
-    
+    $logEntry = [
+        'timestamp' => date('c'),
+        'event' => $event,
+        'context' => $context
+    ];
     file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
 // Function to log errors with different levels
 function logError($level, $message, $context = []) {
-    $logEntry = [
-        'timestamp' => date('Y-m-d H:i:s'),
-        'level' => strtoupper($level),
-        'message' => $message,
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-        'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
-        'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
-        'context' => $context
-    ];
-    
-    $logFile = __DIR__ . '/../logs/error.log';
-    $logDir = dirname($logFile);
-    
+    $logDir = '/tmp/logs';
+    $logFile = $logDir . '/error.log';
     if (!is_dir($logDir)) {
         mkdir($logDir, 0755, true);
     }
-    
+    $logEntry = [
+        'timestamp' => date('c'),
+        'level' => $level,
+        'message' => $message,
+        'context' => $context
+    ];
     file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND | LOCK_EX);
 }
 
