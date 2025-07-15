@@ -4,8 +4,19 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-require_once __DIR__ . '/../classes/TaskComment.php';
-require_once __DIR__ . '/../classes/Task.php';
+// Add direct mysqli connection and queries after JWT validation
+$host = 'taskmanagement.mysql.database.azure.com';
+$db   = 'task_management';
+$dbuser = 'Pleasant';
+$dbpass = 'Adika123';
+
+$con = mysqli_init();
+mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
+mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
+    echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+    exit;
+}
 
 // JWT secret (should match all endpoints)
 $jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
@@ -45,46 +56,63 @@ if (!$user || !isset($user['id'])) {
     exit;
 }
 try {
-    $comment = new TaskComment();
-    $task = new Task();
+    $method = $_SERVER['REQUEST_METHOD'];
     $userId = $user['id'];
 
-    switch ($_SERVER['REQUEST_METHOD']) {
-        case 'GET':
-            if (!isset($_GET['task_id'])) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Missing task_id.']);
-                exit;
-            }
-            $taskInfo = $task->getTaskById($_GET['task_id']);
-            if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
-                http_response_code(403);
-                echo json_encode(['error' => 'You can only view comments for your own tasks.']);
-                exit;
-            }
-            $comments = $comment->getCommentsByTask($_GET['task_id']);
-            echo json_encode(['comments' => $comments]);
-            break;
-        case 'POST':
-            $data = json_decode(file_get_contents('php://input'), true);
-            if (!isset($data['task_id'], $data['comment'])) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Missing required fields.']);
-                exit;
-            }
-            $taskInfo = $task->getTaskById($data['task_id']);
-            if (!$taskInfo || $taskInfo['assigned_to'] != $userId) {
-                http_response_code(403);
-                echo json_encode(['error' => 'You can only comment on your own tasks.']);
-                exit;
-            }
-            $commentId = $comment->addComment($data['task_id'], $userId, $data['comment'], 0);
-            echo json_encode(['success' => true, 'comment_id' => $commentId]);
-            break;
-        default:
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed.']);
-            break;
+    if ($method === 'GET') {
+        if (!isset($_GET['task_id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing task_id.']);
+            exit;
+        }
+        $taskId = (int)$_GET['task_id'];
+        // Only allow comments for tasks assigned to this user
+        $taskRes = $con->prepare("SELECT id FROM tasks WHERE id = ? AND assigned_to = ?");
+        $taskRes->bind_param('ii', $taskId, $userId);
+        $taskRes->execute();
+        $taskCheck = $taskRes->get_result()->fetch_assoc();
+        if (!$taskCheck) {
+            http_response_code(403);
+            echo json_encode(['error' => 'You can only view comments for your own tasks.']);
+            exit;
+        }
+        $res = $con->prepare("SELECT c.*, u.username FROM task_comments c LEFT JOIN users u ON c.user_id = u.id WHERE c.task_id = ? ORDER BY c.created_at ASC");
+        $res->bind_param('i', $taskId);
+        $res->execute();
+        $result = $res->get_result();
+        $comments = [];
+        while ($row = $result->fetch_assoc()) $comments[] = $row;
+        echo json_encode(['comments' => $comments]);
+    } elseif ($method === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (!isset($data['task_id'], $data['comment'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields.']);
+            exit;
+        }
+        $taskId = (int)$data['task_id'];
+        // Only allow comments for tasks assigned to this user
+        $taskRes = $con->prepare("SELECT id FROM tasks WHERE id = ? AND assigned_to = ?");
+        $taskRes->bind_param('ii', $taskId, $userId);
+        $taskRes->execute();
+        $taskCheck = $taskRes->get_result()->fetch_assoc();
+        if (!$taskCheck) {
+            http_response_code(403);
+            echo json_encode(['error' => 'You can only comment on your own tasks.']);
+            exit;
+        }
+        $stmt = $con->prepare("INSERT INTO task_comments (task_id, user_id, comment) VALUES (?, ?, ?)");
+        $stmt->bind_param('iis', $taskId, $userId, $data['comment']);
+        $ok = $stmt->execute();
+        if ($ok) {
+            echo json_encode(['success' => true, 'comment_id' => $con->insert_id]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => $stmt->error]);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed.']);
     }
 } catch (Exception $e) {
     http_response_code(500);

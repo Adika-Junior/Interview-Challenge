@@ -7,8 +7,6 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, PUT');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-require_once __DIR__ . '/../classes/Task.php';
-
 // JWT secret (should match all endpoints)
 $jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
 function base64url_encode($data) {
@@ -64,57 +62,48 @@ if (!$user || !isset($user['id'])) {
     exit;
 }
 
-$task = new Task();
+// Add direct mysqli connection and queries after JWT validation
+$host = 'taskmanagement.mysql.database.azure.com';
+$db   = 'task_management';
+$dbuser = 'Pleasant';
+$dbpass = 'Adika123';
+
+$con = mysqli_init();
+mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
+mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
+    echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
+    exit;
+}
+
+$method = $_SERVER['REQUEST_METHOD'];
 $userId = $user['id'];
 
-try {
-    switch ($_SERVER['REQUEST_METHOD']) {
-        case 'GET':
-            // List tasks assigned to the logged-in user
-            try {
-            $tasks = $task->getTasksByUser($userId);
-            echo json_encode(['tasks' => $tasks]);
-            } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
-                exit;
-            }
-            break;
-        case 'PUT':
-            // Update status of a task assigned to the user
-            $data = json_decode(file_get_contents('php://input'), true);
-            if (!isset($data['id'], $data['status'])) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Missing required fields.']);
-                exit;
-            }
-            // Check if the task belongs to the user
-            try {
-            $taskDetails = $task->getTaskById($data['id']);
-            if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
-                    logDebug(['error' => 'You can only update your own tasks.', 'taskDetails' => $taskDetails, 'userId' => $userId]);
-                http_response_code(403);
-                echo json_encode(['error' => 'You can only update your own tasks.']);
-                exit;
-            }
-                $task->updateTaskStatus($data['id'], $data['status']);
-                echo json_encode(['success' => true]);
-            } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
-                exit;
-            }
-            break;
-        default:
-            http_response_code(405);
-            echo json_encode(['error' => 'Method not allowed.']);
-            break;
+if ($method === 'GET') {
+    $res = $con->prepare("SELECT t.*, u1.username as assigned_to_name, u2.username as assigned_by_name FROM tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id LEFT JOIN users u2 ON t.assigned_by = u2.id WHERE t.assigned_to = ? ORDER BY t.created_at DESC");
+    $res->bind_param('i', $userId);
+    $res->execute();
+    $result = $res->get_result();
+    $tasks = [];
+    while ($row = $result->fetch_assoc()) $tasks[] = $row;
+    echo json_encode(['tasks' => $tasks]);
+} elseif ($method === 'PUT') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (!isset($data['id'], $data['status'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing required fields.']);
+        exit;
     }
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode([
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString()
-    ]);
-    exit;
+    $stmt = $con->prepare("UPDATE tasks SET status = ? WHERE id = ? AND assigned_to = ?");
+    $stmt->bind_param('sii', $data['status'], $data['id'], $userId);
+    $ok = $stmt->execute();
+    if ($ok) {
+        echo json_encode(['success' => true]);
+    } else {
+        http_response_code(500);
+        echo json_encode(['error' => $stmt->error]);
+    }
+} else {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed.']);
 }
