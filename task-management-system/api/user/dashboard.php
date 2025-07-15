@@ -4,6 +4,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
+require_once __DIR__ . '/../classes/Database.php';
+
 $jwtSecret = 'fe91e46f769cd291653f48b7e95aa58150f2a4c0094801cdc4f954ca670d3d47';
 function base64url_encode($data) {
     return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
@@ -40,45 +42,38 @@ if (!$user || !isset($user['id'])) {
     echo json_encode(['error' => 'Access denied. Login required.']);
     exit;
 }
-$host = 'taskmanagement.mysql.database.azure.com';
-$db   = 'task_management';
-$dbuser = 'Pleasant';
-$dbpass = 'Adika123';
-$con = mysqli_init();
-mysqli_ssl_set($con, NULL, NULL, NULL, NULL, NULL);
-mysqli_options($con, MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+
 try {
-    if (!mysqli_real_connect($con, $host, $dbuser, $dbpass, $db, 3306, NULL, MYSQLI_CLIENT_SSL)) {
-        echo json_encode(['error' => 'Database connection failed: ' . mysqli_connect_error()]);
-        exit;
-    }
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
-    exit;
-}
-$userId = $user['id'];
-$stats = [
-    'total_tasks' => 0,
-    'pending_tasks' => 0,
-    'in_progress_tasks' => 0,
-    'completed_tasks' => 0
-];
-$res = $con->query("SELECT status, COUNT(*) as count FROM tasks WHERE assigned_to = " . intval($userId) . " GROUP BY status");
-if ($res) {
-    while ($row = $res->fetch_assoc()) {
+    $db = new Database();
+    $userId = $user['id'];
+
+    // Get task stats for the user
+    $statsRows = $db->safeFetchAll(
+        "SELECT status, COUNT(*) as count FROM tasks WHERE assigned_to = ? GROUP BY status",
+        [$userId]
+    );
+    $stats = [
+        'total_tasks' => 0,
+        'pending_tasks' => 0,
+        'in_progress_tasks' => 0,
+        'completed_tasks' => 0
+    ];
+    foreach ($statsRows as $row) {
         $stats['total_tasks'] += $row['count'];
         if ($row['status'] === 'Pending') $stats['pending_tasks'] = $row['count'];
         if ($row['status'] === 'In Progress') $stats['in_progress_tasks'] = $row['count'];
         if ($row['status'] === 'Completed') $stats['completed_tasks'] = $row['count'];
     }
-}
-$tasks = [];
-$resTasks = $con->query("SELECT t.*, u1.username as assigned_to_name, u2.username as assigned_by_name FROM tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id LEFT JOIN users u2 ON t.assigned_by = u2.id WHERE t.assigned_to = " . intval($userId) . " ORDER BY t.created_at DESC");
-if ($resTasks) {
-    while ($row = $resTasks->fetch_assoc()) {
-        $tasks[] = $row;
-    }
-}
 
-echo json_encode(['stats' => $stats, 'tasks' => $tasks]);
+    // Get all tasks for the user, including assigned_to/assigned_by names
+    $tasks = $db->safeFetchAll(
+        "SELECT t.*, u1.username as assigned_to_name, u2.username as assigned_by_name FROM tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id LEFT JOIN users u2 ON t.assigned_by = u2.id WHERE t.assigned_to = ? ORDER BY t.created_at DESC",
+        [$userId]
+    );
+
+    echo json_encode(['stats' => $stats, 'tasks' => $tasks]);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
+    exit;
+}
