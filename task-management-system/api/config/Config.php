@@ -29,10 +29,10 @@ class Config {
     
     public function getDatabaseConfig() {
         return [
-            'host' => $this->get('DB_HOST', 'localhost'),
-            'username' => $this->get('DB_USERNAME', 'root'),
-            'password' => $this->get('DB_PASSWORD', ''),
-            'database' => $this->get('DB_NAME', 'task_management')
+            'host' => 'taskmanagement.mysql.database.azure.com',
+            'username' => 'Pleasant',
+            'password' => 'Adika123',
+            'database' => 'task_management'
         ];
     }
     
