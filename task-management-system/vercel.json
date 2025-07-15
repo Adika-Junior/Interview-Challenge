@@ -6,8 +6,7 @@
     }
   },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
+    { "src": "/api/(.*)\\.php", "dest": "/api/$1.php" }
   ],
   "outputDirectory": "public"
 }
