@@ -56,7 +56,7 @@ try {
     }
     $method = $_SERVER['REQUEST_METHOD'];
     if ($method === 'GET') {
-        $res = $con->query("SELECT * FROM tasks");
+        $res = $con->query("SELECT t.*, u1.username AS assigned_to_name, u2.username AS assigned_by_name FROM tasks t LEFT JOIN users u1 ON t.assigned_to = u1.id LEFT JOIN users u2 ON t.assigned_by = u2.id");
         $tasks = [];
         while ($row = $res->fetch_assoc()) $tasks[] = $row;
         echo json_encode(['tasks' => $tasks]);

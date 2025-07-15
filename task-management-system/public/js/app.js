@@ -797,15 +797,16 @@ class TaskManager {
             const div = document.createElement('div');
             div.className = 'comment';
             // Use a default avatar if not present
-            const avatarUrl = comment.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.author || 'User') + '&background=eee&color=516d45&size=64';
+            const authorName = comment.role === 'admin' ? 'Admin' : (comment.username || 'User');
+            const avatarUrl = comment.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authorName) + '&background=eee&color=516d45&size=64';
             div.innerHTML = `
                 <img src="${avatarUrl}" alt="User avatar" class="comment-avatar" loading="lazy">
                 <div class="comment-body">
                     <div class="comment-meta">
-                        <span class="comment-author">${comment.author || 'User'}</span>
+                        <span class="comment-author">${authorName}</span>
                         <span class="comment-time">${this.timeAgo(comment.created_at)}</span>
                     </div>
-                    <div class="comment-text">${this.escapeHTML(comment.text)}</div>
+                    <div class="comment-text">${this.escapeHTML(comment.comment)}</div>
                 </div>
             `;
             list.appendChild(div);
