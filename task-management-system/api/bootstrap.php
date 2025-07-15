@@ -202,10 +202,20 @@ set_error_handler(function($severity, $message, $file, $line) {
     if (!(error_reporting() & $severity)) {
         return;
     }
-    
     $error = new ErrorException($message, 0, $severity, $file, $line);
-    $response = handleError($error);
-    
+    $appConfig = Config::getInstance()->getAppConfig();
+    $response = [
+        'error' => $error->getMessage(),
+        'file' => $error->getFile(),
+        'line' => $error->getLine(),
+        'trace' => $error->getTraceAsString()
+    ];
+    if (!$appConfig['debug']) {
+        $response = [
+            'error' => 'An error occurred. Please try again later.',
+            'details' => 'Service temporarily unavailable'
+        ];
+    }
     header('Content-Type: application/json');
     http_response_code(500);
     echo json_encode($response);
@@ -214,8 +224,19 @@ set_error_handler(function($severity, $message, $file, $line) {
 
 // Set exception handler
 set_exception_handler(function($error) {
-    $response = handleError($error);
-    
+    $appConfig = Config::getInstance()->getAppConfig();
+    $response = [
+        'error' => $error->getMessage(),
+        'file' => $error->getFile(),
+        'line' => $error->getLine(),
+        'trace' => $error->getTraceAsString()
+    ];
+    if (!$appConfig['debug']) {
+        $response = [
+            'error' => 'An error occurred. Please try again later.',
+            'details' => 'Service temporarily unavailable'
+        ];
+    }
     header('Content-Type: application/json');
     http_response_code(500);
     echo json_encode($response);
