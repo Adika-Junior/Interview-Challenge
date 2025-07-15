@@ -36,6 +36,7 @@ if (isset($headers['Authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['Authorization']);
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
+error_log('AUTH CHECK JWT payload: ' . json_encode($user));
 if ($user && isset($user['id'])) {
     echo json_encode(['user' => $user]);
 } else {

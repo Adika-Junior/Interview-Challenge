@@ -6,6 +6,10 @@
     }
   },
   "routes": [
+    { "src": "/api/admin/(.*)\\.php", "dest": "/api/admin/$1.php" },
+    { "src": "/api/user/(.*)\\.php", "dest": "/api/user/$1.php" },
+    { "src": "/api/auth/(.*)\\.php", "dest": "/api/auth/$1.php" },
+    { "src": "/api/tasks/(.*)\\.php", "dest": "/api/tasks/$1.php" },
     { "src": "/api/(.*)\\.php", "dest": "/api/$1.php" },
     { "src": "/js/(.*)", "dest": "/public/js/$1" },
     { "src": "/css/(.*)", "dest": "/public/css/$1" },

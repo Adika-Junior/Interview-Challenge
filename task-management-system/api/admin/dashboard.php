@@ -38,6 +38,7 @@ if (isset($headers['Authorization'])) {
     $jwt = str_replace('Bearer ', '', $headers['Authorization']);
 }
 $user = getUserFromJWT($jwt, $jwtSecret);
+error_log('ADMIN DASHBOARD JWT payload: ' . json_encode($user));
 if (!$user || $user['role'] !== 'admin') {
     http_response_code(401);
     echo json_encode(['error' => 'Access denied. Admins only.']);
