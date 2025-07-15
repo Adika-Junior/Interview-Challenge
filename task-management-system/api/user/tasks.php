@@ -68,8 +68,8 @@ switch ($_SERVER['REQUEST_METHOD']) {
     case 'GET':
         // List tasks assigned to the logged-in user
         try {
-            $tasks = $task->getTasksByUser($userId);
-            echo json_encode(['tasks' => $tasks]);
+        $tasks = $task->getTasksByUser($userId);
+        echo json_encode(['tasks' => $tasks]);
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Server error', 'details' => $e->getMessage()]);
@@ -86,13 +86,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
         }
         // Check if the task belongs to the user
         try {
-            $taskDetails = $task->getTaskById($data['id']);
-            if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
+        $taskDetails = $task->getTaskById($data['id']);
+        if (!$taskDetails || $taskDetails['assigned_to'] != $userId) {
                 logDebug(['error' => 'You can only update your own tasks.', 'taskDetails' => $taskDetails, 'userId' => $userId]);
-                http_response_code(403);
-                echo json_encode(['error' => 'You can only update your own tasks.']);
-                exit;
-            }
+            http_response_code(403);
+            echo json_encode(['error' => 'You can only update your own tasks.']);
+            exit;
+        }
             $task->updateTaskStatus($data['id'], $data['status']);
             echo json_encode(['success' => true]);
         } catch (Exception $e) {

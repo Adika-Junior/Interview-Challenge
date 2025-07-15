@@ -138,10 +138,10 @@ class Database {
             throw new Exception('Multiple SQL statements not allowed');
         }
         
-        // Check for dangerous SQL operations in certain contexts
+        // Only log if dangerous operation is at the start of the statement (not in column names)
         $dangerousOperations = ['drop', 'delete', 'truncate', 'alter', 'create'];
         foreach ($dangerousOperations as $operation) {
-            if (strpos($sql, $operation) !== false) {
+            if (preg_match('/^' . $operation . '\b/', $sql)) {
                 // Log suspicious activity
                 error_log("Suspicious SQL operation detected: $operation in query: $sql");
             }

@@ -365,24 +365,24 @@ class TaskManager {
         const headers = {
             'Content-Type': 'application/json',
             'User-Agent': navigator.userAgent // Add User-Agent header for Vercel
-        };
+            };
         if (this.jwtToken) {
             headers['Authorization'] = 'Bearer ' + this.jwtToken;
         }
         let response;
         try {
             response = await fetch(endpoint, {
-                method,
-                headers,
-                body: data ? JSON.stringify(data) : undefined
-            });
+            method,
+            headers,
+            body: data ? JSON.stringify(data) : undefined
+        });
         } catch (err) {
             if (!suppressErrorToast) this.showToast('Network error. Please check your connection.', 'error');
             throw err;
         }
         const text = await response.text();
-        let result;
-        try {
+            let result;
+            try {
             result = JSON.parse(text);
         } catch (e) {
             if (!suppressErrorToast) {
@@ -393,8 +393,8 @@ class TaskManager {
         }
         if (!response.ok && !suppressErrorToast) {
             this.showToast(result.error || 'Request failed', 'error');
-        }
-        return result;
+            }
+            return result;
     }
 
     // --- JWT Helper ---
@@ -429,7 +429,7 @@ class TaskManager {
             const result = await this.apiCall('/api/auth/login.php', 'POST', { username, password });
             if (result && result.success && result.token) {
                 this.saveSession(result.token, result.user);
-                this.showDashboard();
+            this.showDashboard();
                 this.showToast('Login successful!', 'success');
             } else {
                 this.clearSession();
@@ -567,8 +567,8 @@ class TaskManager {
         try {
             const result = await this.apiCall('/api/user/tasks.php', 'GET');
             if (result && Array.isArray(result.tasks)) {
-                this.tasks = result.tasks;
-                this.renderTasksTable();
+            this.tasks = result.tasks;
+            this.renderTasksTable();
             } else {
                 this.tasks = [];
                 this.renderTasksTable('No tasks assigned yet.');
@@ -689,29 +689,29 @@ class TaskManager {
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#888;font-style:italic;">${emptyMessage || 'No tasks assigned yet.'}</td></tr>`;
             } else {
-                filtered.forEach(task => {
-                    const row = document.createElement('tr');
-                    const statusClass = task.status.toLowerCase().replace(' ', '-');
-                    const timeRemaining = this.getTimeRemaining(task.deadline);
-                    row.innerHTML = `
-                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.id}</td>
-                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.title}</td>
-                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.description || 'No description'}</td>
-                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name}</td>
-                        <td><span class="status-badge status-${statusClass}">${task.status}</span></td>
-                        <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.deadline || ''}${timeRemaining ? `<br><span style='color:var(--text-muted);font-size:0.9em;'>${timeRemaining} left</span>` : ''}</td>
-                        <td class="action-buttons">
-                            ${this.getTaskActions(task)}
-                        </td>
-                    `;
-                    row.style.cursor = 'pointer';
-                    row.onclick = (e) => {
-                        if (!e.target.closest('.action-buttons')) {
-                            this.openTaskModal(task);
-                        }
-                    };
-                    tbody.appendChild(row);
-                });
+            filtered.forEach(task => {
+                const row = document.createElement('tr');
+                const statusClass = task.status.toLowerCase().replace(' ', '-');
+                const timeRemaining = this.getTimeRemaining(task.deadline);
+                row.innerHTML = `
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.id}</td>
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.title}</td>
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.description || 'No description'}</td>
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.assigned_to_name}</td>
+                    <td><span class="status-badge status-${statusClass}">${task.status}</span></td>
+                    <td style="color: var(--text-emphasis); font-weight: var(--font-weight-medium);">${task.deadline || ''}${timeRemaining ? `<br><span style='color:var(--text-muted);font-size:0.9em;'>${timeRemaining} left</span>` : ''}</td>
+                    <td class="action-buttons">
+                        ${this.getTaskActions(task)}
+                    </td>
+                `;
+                row.style.cursor = 'pointer';
+                row.onclick = (e) => {
+                    if (!e.target.closest('.action-buttons')) {
+                        this.openTaskModal(task);
+                    }
+                };
+                tbody.appendChild(row);
+            });
             }
             tbody.scrollTop = scrollTop;
             tbody.style.opacity = '1';
