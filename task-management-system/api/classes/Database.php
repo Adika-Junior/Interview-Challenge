@@ -208,13 +208,7 @@ class Database {
             'context' => $context
         ];
         
-        $logFile = __DIR__ . '/../../logs/database.log';
-        $logDir = dirname($logFile);
-        
-        if (!is_dir($logDir)) {
-            mkdir($logDir, 0755, true);
-        }
-        
+        $logFile = '/tmp/database.log'; // Use /tmp for Vercel compatibility
         file_put_contents($logFile, json_encode($logEntry) . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 }
