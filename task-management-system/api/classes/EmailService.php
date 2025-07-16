@@ -518,6 +518,6 @@ class EmailService {
         $body .= '</ul>';
         $body .= '<p>You can log in at <a href="https://interview-challenge-lac.vercel.app/">https://interview-challenge-lac.vercel.app/</a></p>';
         $body .= '<p>If you have any questions, contact your admin.</p>';
-        return $this->sendEmail($to, $subject, $body);
+        return $this->sendCustomEmail($to, $subject, $body);
     }
 }
