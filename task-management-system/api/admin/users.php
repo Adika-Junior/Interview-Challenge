@@ -74,7 +74,11 @@ try {
         if ($ok) {
             // Send welcome email with credentials
             $emailService = new EmailService();
-            $emailService->sendUserWelcomeEmail($data['email'], $data['username'], $data['password']);
+            $emailService->sendUserWelcomeEmail(
+                $data['email'],
+                ['email' => $data['email'], 'name' => $data['username']],
+                $data['password']
+            );
             echo json_encode(['success' => true, 'user_id' => $con->insert_id]);
         } else {
             http_response_code(500);
@@ -100,9 +104,17 @@ try {
             // Send updated credentials email
             $emailService = new EmailService();
             if (!empty($data['password'])) {
-                $emailService->sendUserWelcomeEmail($data['email'], $data['username'], $data['password']);
+                $emailService->sendUserWelcomeEmail(
+                    $data['email'],
+                    ['email' => $data['email'], 'name' => $data['username']],
+                    $data['password']
+                );
             } else {
-                $emailService->sendUserWelcomeEmail($data['email'], $data['username'], '[unchanged]');
+                $emailService->sendUserWelcomeEmail(
+                    $data['email'],
+                    ['email' => $data['email'], 'name' => $data['username']],
+                    '[unchanged]'
+                );
             }
             echo json_encode(['success' => true]);
         } else {
